@@ -65,8 +65,8 @@ export default function DashboardPage() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
-          <Button onClick={() => openForm()} className="flex-1 justify-center gap-2 text-[14px]">
-            <Plus size={15} /> Novo Lançamento
+          <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px]">
+            <Plus size={13} /> Novo Lançamento
           </Button>
           <VoiceMicButton
             onResult={(transcript) => {
