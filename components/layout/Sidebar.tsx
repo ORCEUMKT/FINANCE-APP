@@ -23,22 +23,30 @@ export function Sidebar({ user: _ }: { user: unknown }) {
       className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 z-20 overflow-hidden"
       style={{
         width: open ? '200px' : '64px',
-        transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
-        background: 'var(--sidebar)',
-        borderRight: '1px solid var(--border)',
+        transition: 'width 0.24s cubic-bezier(0.4,0,0.2,1)',
+        background: 'rgba(10,10,18,0.88)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '4px 0 32px rgba(0,0,0,0.4)',
       }}
     >
-      {/* Logo area */}
-      <div className="relative flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ height: '64px' }}>
-        {/* Collapsed: icon only */}
+      {/* Logo */}
+      <div
+        className="relative flex items-center flex-shrink-0 overflow-hidden"
+        style={{ height: '68px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+      >
+        {/* Collapsed: icon only, centered */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logo/logo-icon.png"
           alt="Logo"
           style={{
-            height: '28px',
+            height: '26px',
             width: 'auto',
             position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
             opacity: open ? 0 : 1,
             transition: 'opacity 0.15s',
             pointerEvents: 'none',
@@ -53,19 +61,19 @@ export function Sidebar({ user: _ }: { user: unknown }) {
             height: '20px',
             width: 'auto',
             position: 'absolute',
-            left: '18px',
+            left: '20px',
             opacity: open ? 1 : 0,
-            transition: 'opacity 0.18s 0.05s',
+            transition: 'opacity 0.18s 0.06s',
             pointerEvents: 'none',
           }}
         />
       </div>
 
-      {/* Divider */}
-      <div style={{ height: '1px', background: 'var(--border)', margin: '0 12px' }} />
-
       {/* Nav */}
-      <nav className="flex flex-col gap-1 w-full py-4 px-2 flex-1">
+      <nav
+        className="flex flex-col flex-1 py-4"
+        style={{ gap: '4px', padding: open ? '16px 10px' : '16px 0' }}
+      >
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
@@ -95,17 +103,21 @@ function NavItem({
 }) {
   const [hovered, setHovered] = useState(false)
 
-  const bg = active
-    ? 'rgba(124,90,252,0.14)'
+  const iconBg = active
+    ? 'rgba(124,90,252,0.22)'
     : hovered
-    ? 'rgba(255,255,255,0.06)'
+    ? 'rgba(255,255,255,0.08)'
     : 'transparent'
 
-  const border = active
-    ? '1px solid rgba(124,90,252,0.22)'
+  const iconBorder = active
+    ? '1px solid rgba(124,90,252,0.35)'
     : hovered
-    ? '1px solid rgba(255,255,255,0.08)'
+    ? '1px solid rgba(255,255,255,0.1)'
     : '1px solid transparent'
+
+  const iconShadow = active
+    ? '0 0 20px rgba(124,90,252,0.25), inset 0 1px 0 rgba(255,255,255,0.08)'
+    : 'none'
 
   const color = active ? 'var(--accent)' : hovered ? 'var(--text-1)' : 'var(--text-3)'
 
@@ -115,39 +127,41 @@ function NavItem({
       title={!open ? label : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="relative flex items-center h-10 rounded-[12px] whitespace-nowrap overflow-hidden w-full"
+      className="flex items-center whitespace-nowrap overflow-hidden w-full"
       style={{
-        background: bg,
-        border,
+        height: '44px',
         color,
-        paddingLeft: open ? '14px' : '22px',
-        boxShadow: active ? '0 0 16px rgba(124,90,252,0.08)' : 'none',
-        transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
+        justifyContent: open ? 'flex-start' : 'center',
+        transition: 'color 0.15s',
       }}
     >
-      {/* Left accent bar */}
+      {/* Icon glass square */}
       <span
-        className="absolute left-0 w-[3px] h-5 rounded-r-full"
+        className="flex items-center justify-center flex-shrink-0"
         style={{
-          background: 'var(--accent)',
-          opacity: active ? 1 : hovered ? 0.45 : 0,
-          transition: 'opacity 0.15s',
+          width: '40px',
+          height: '40px',
+          borderRadius: '12px',
+          background: iconBg,
+          border: iconBorder,
+          boxShadow: iconShadow,
+          backdropFilter: active ? 'blur(8px)' : 'none',
+          WebkitBackdropFilter: active ? 'blur(8px)' : 'none',
+          transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
+          flexShrink: 0,
         }}
-      />
-
-      {/* Icon — always visible, fixed position */}
-      <span className="flex items-center justify-center w-5 h-5 flex-shrink-0">
-        <Icon size={17} />
+      >
+        <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
       </span>
 
-      {/* Label — fades in when expanded */}
+      {/* Label */}
       <span
-        className="text-[12px] font-medium flex-shrink-0"
+        className="text-[13px] font-medium"
         style={{
           marginLeft: '10px',
           opacity: open ? 1 : 0,
-          transform: open ? 'translateX(0)' : 'translateX(-4px)',
-          transition: 'opacity 0.18s, transform 0.18s',
+          transform: open ? 'translateX(0)' : 'translateX(-8px)',
+          transition: 'opacity 0.2s, transform 0.2s',
           pointerEvents: 'none',
         }}
       >
