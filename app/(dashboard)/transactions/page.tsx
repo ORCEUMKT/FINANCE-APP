@@ -8,6 +8,7 @@ import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
+import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
@@ -20,10 +21,27 @@ export default function TransactionsPage() {
   const params = useSearchParams()
   const { toast } = useToast()
 
-  const [search, setSearch]         = useState(params.get('search') ?? '')
-  const [catFilter, setCatFilter]   = useState(params.get('category') ?? '')
-  const [dateFrom, setDateFrom]     = useState(params.get('date_from') ?? '')
-  const [dateTo, setDateTo]         = useState(params.get('date_to') ?? '')
+  const [selectedMonth, setSelectedMonth] = useState<MonthValue>(() => {
+    const df = params.get('date_from')
+    if (df) {
+      const d = new Date(df + 'T00:00:00')
+      return { year: d.getFullYear(), month: d.getMonth() }
+    }
+    return currentMonth()
+  })
+  const { dateFrom: mFrom, dateTo: mTo } = monthRange(selectedMonth)
+
+  const [search, setSearch]       = useState(params.get('search') ?? '')
+  const [catFilter, setCatFilter] = useState(params.get('category') ?? '')
+  const [dateFrom, setDateFrom]   = useState(params.get('date_from') ?? mFrom)
+  const [dateTo, setDateTo]       = useState(params.get('date_to') ?? mTo)
+
+  function applyMonth(v: MonthValue) {
+    setSelectedMonth(v)
+    const { dateFrom: f, dateTo: t } = monthRange(v)
+    setDateFrom(f)
+    setDateTo(t)
+  }
   const [showFilters, setShowFilters] = useState(false)
   const [formOpen, setFormOpen]         = useState(false)
   const [editing, setEditing]           = useState<Transaction | null>(null)
@@ -87,14 +105,20 @@ export default function TransactionsPage() {
     toast('Marcado como recuperado!')
   }, [markRecovered, toast])
 
-  const clearFilters = () => { setSearch(''); setCatFilter(''); setDateFrom(''); setDateTo('') }
-  const hasFilters = search || catFilter || dateFrom || dateTo
+  function clearFilters() {
+    setSearch('')
+    setCatFilter('')
+    const { dateFrom: f, dateTo: t } = monthRange(selectedMonth)
+    setDateFrom(f)
+    setDateTo(t)
+  }
+  const hasFilters = search || catFilter
   const total = transactions.reduce((s, t) => s + t.value, 0)
 
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-800 text-white">Extrato</h1>
           <p className="text-xs text-white/35 mt-0.5">
@@ -102,6 +126,7 @@ export default function TransactionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <MonthPicker value={selectedMonth} onChange={applyMonth} />
           <VoiceMicButton
             onResult={(transcript) => {
               const parsed = parseVoiceInput(transcript)

@@ -11,6 +11,7 @@ import { BarChart } from '@/components/dashboard/BarChart'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
+import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -21,7 +22,9 @@ import { createTransaction } from '@/services/transactionsService'
 import type { TransactionInsert } from '@/types/transaction'
 
 export default function DashboardPage() {
-  const { metrics, loading, refetch } = useDashboardMetrics()
+  const [selectedMonth, setSelectedMonth] = useState<MonthValue>(currentMonth)
+  const { dateFrom, dateTo } = monthRange(selectedMonth)
+  const { metrics, loading, refetch } = useDashboardMetrics(dateFrom, dateTo)
   const { categories } = useCategories()
   const { toast } = useToast()
   const router = useRouter()
@@ -63,19 +66,22 @@ export default function DashboardPage() {
       ═══════════════════════════════════════ */}
       <div className="lg:hidden flex flex-col gap-5 pb-4">
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2">
-          <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px]">
-            <Plus size={13} /> Novo Lançamento
-          </Button>
-          <VoiceMicButton
-            onResult={(transcript) => {
-              const parsed = parseVoiceInput(transcript)
-              toast(`Detectado: "${transcript}"`)
-              openForm(parsed)
-            }}
-            onError={(msg) => toast(msg)}
-          />
+        {/* Month selector + actions */}
+        <div className="flex items-center justify-between gap-2">
+          <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
+          <div className="flex items-center gap-2">
+            <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px]">
+              <Plus size={13} /> Novo Lançamento
+            </Button>
+            <VoiceMicButton
+              onResult={(transcript) => {
+                const parsed = parseVoiceInput(transcript)
+                toast(`Detectado: "${transcript}"`)
+                openForm(parsed)
+              }}
+              onError={(msg) => toast(msg)}
+            />
+          </div>
         </div>
 
         {/* Saldo Líquido — solto, sem Card (estilo banco) */}
@@ -204,9 +210,12 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-          <Button onClick={() => router.push('/transactions')} size="sm">
-            <Plus size={13} /> Lançamento
-          </Button>
+          <div className="flex items-center gap-3">
+            <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
+            <Button onClick={() => router.push('/transactions')} size="sm">
+              <Plus size={13} /> Lançamento
+            </Button>
+          </div>
         </div>
 
         {/* 4-card metric grid */}
