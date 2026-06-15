@@ -16,18 +16,36 @@ interface TransactionFormProps {
   editingTransaction?: Transaction | null
 }
 
+function addMonths(dateStr: string, months: number): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setMonth(d.getMonth() + months)
+  return d.toISOString().slice(0, 10)
+}
+
+const TYPES = [
+  { value: 'expense', label: 'Despesa' },
+  { value: 'income',  label: 'Receita' },
+  { value: 'recover', label: 'Recuperar' },
+] as const
+
+const STATUSES = [
+  { value: 'paid',    label: 'Pago' },
+  { value: 'pending', label: 'Pendente' },
+] as const
+
 export function TransactionForm({ open, onClose, onSubmit, categories, editingTransaction }: TransactionFormProps) {
   const isEdit = !!editingTransaction
 
-  const [description, setDescription] = useState('')
-  const [value, setValue]             = useState('')
-  const [date, setDate]               = useState('')
-  const [categoryId, setCategoryId]   = useState<string>('')
-  const [type, setType]               = useState<'expense' | 'income' | 'recover'>('expense')
-  const [status, setStatus]           = useState<'paid' | 'pending' | 'recoverable'>('paid')
-  const [notes, setNotes]             = useState('')
-  const [errors, setErrors]           = useState<FieldError[]>([])
-  const [loading, setLoading]         = useState(false)
+  const [description, setDescription]   = useState('')
+  const [value, setValue]               = useState('')
+  const [date, setDate]                 = useState('')
+  const [categoryId, setCategoryId]     = useState<string>('')
+  const [type, setType]                 = useState<'expense' | 'income' | 'recover'>('expense')
+  const [status, setStatus]             = useState<'paid' | 'pending' | 'recoverable'>('paid')
+  const [notes, setNotes]               = useState('')
+  const [installments, setInstallments] = useState(1)
+  const [errors, setErrors]             = useState<FieldError[]>([])
+  const [loading, setLoading]           = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -43,6 +61,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setDescription(''); setValue(''); setDate(new Date().toISOString().slice(0, 10))
         setCategoryId(categories[0]?.id ?? ''); setType('expense'); setStatus('paid'); setNotes('')
       }
+      setInstallments(1)
       setErrors([])
     }
   }, [open, editingTransaction, categories])
@@ -55,15 +74,18 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
     if (errs.length) { setErrors(errs); return }
     setLoading(true)
     try {
-      await onSubmit({
-        description: description.trim(),
-        value: parseFloat(value),
-        date,
-        category_id: categoryId || null,
-        type,
-        status: type === 'recover' ? 'recoverable' : status,
-        notes: notes.trim() || null,
-      })
+      const n = !isEdit && installments > 1 ? installments : 1
+      for (let i = 0; i < n; i++) {
+        await onSubmit({
+          description: n > 1 ? `${description.trim()} (${i + 1}/${n})` : description.trim(),
+          value: parseFloat(value),
+          date: addMonths(date, i),
+          category_id: categoryId || null,
+          type,
+          status: type === 'recover' ? 'recoverable' : status,
+          notes: notes.trim() || null,
+        })
+      }
       onClose()
     } catch (err: unknown) {
       setErrors([{ field: 'form', message: err instanceof Error ? err.message : 'Erro ao salvar.' }])
@@ -71,6 +93,26 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
       setLoading(false)
     }
   }
+
+  const segBtnStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: '10px 0',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: 600,
+    border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+    background: active ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+    color: active ? '#fff' : 'var(--text-3)',
+    cursor: 'pointer',
+    transition: 'all .15s',
+    fontFamily: 'inherit',
+  })
+
+  const fieldLabel = (text: string) => (
+    <label className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>
+      {text}
+    </label>
+  )
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Editar Lançamento' : 'Novo Lançamento'}>
@@ -83,6 +125,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           error={fieldError('description')}
           maxLength={120}
         />
+
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Valor (R$)"
@@ -93,7 +136,6 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
             value={value}
             onChange={(e) => setValue(e.target.value)}
             error={fieldError('value')}
-            className="text-emerald-400 font-800"
           />
           <Input
             label="Data"
@@ -103,12 +145,49 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
             error={fieldError('date')}
           />
         </div>
+
+        {/* Parcelas — somente para novos lançamentos */}
+        {!isEdit && (
+          <div className="flex flex-col gap-1.5">
+            {fieldLabel('Parcelas')}
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={installments}
+                onChange={(e) => setInstallments(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))}
+                className="w-20 rounded-[12px] px-3 py-2.5 text-sm text-center tabular"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-1)',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+              <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                {installments === 1
+                  ? 'à vista'
+                  : `${installments}× — datas automáticas (+1 mês cada`}
+                {installments > 1 ? ')' : ''}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-700 uppercase tracking-[2px] text-white/40">Categoria</label>
+          {fieldLabel('Categoria')}
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full bg-white/[.055] border border-white/10 rounded-[14px] px-4 py-3 text-sm text-white outline-none focus:border-white/25"
+            className="w-full rounded-[14px] px-4 py-3 text-sm outline-none"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-1)',
+              fontFamily: 'inherit',
+            }}
           >
             <option value="">Sem categoria</option>
             {categories.map((c) => (
@@ -116,46 +195,31 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
             ))}
           </select>
         </div>
+
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-700 uppercase tracking-[2px] text-white/40">Tipo</label>
+          {fieldLabel('Tipo')}
           <div className="flex gap-2">
-            {(['expense','income','recover'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                className={`flex-1 py-2.5 rounded-xl text-[11px] font-700 border transition-all ${
-                  type === t
-                    ? 'bg-white text-[#050506] border-white'
-                    : 'bg-white/[.04] text-white/40 border-white/10 hover:bg-white/[.08]'
-                }`}
-              >
-                {t === 'expense' ? 'Despesa' : t === 'income' ? 'Receita' : 'Recuperar'}
+            {TYPES.map(({ value: t, label }) => (
+              <button key={t} type="button" onClick={() => setType(t)} style={segBtnStyle(type === t)}>
+                {label}
               </button>
             ))}
           </div>
         </div>
+
         {type !== 'recover' && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-700 uppercase tracking-[2px] text-white/40">Status</label>
+            {fieldLabel('Status')}
             <div className="flex gap-2">
-              {(['paid','pending'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatus(s)}
-                  className={`flex-1 py-2.5 rounded-xl text-[11px] font-700 border transition-all ${
-                    status === s
-                      ? 'bg-white text-[#050506] border-white'
-                      : 'bg-white/[.04] text-white/40 border-white/10 hover:bg-white/[.08]'
-                  }`}
-                >
-                  {s === 'paid' ? 'Pago' : 'Pendente'}
+              {STATUSES.map(({ value: s, label }) => (
+                <button key={s} type="button" onClick={() => setStatus(s)} style={segBtnStyle(status === s)}>
+                  {label}
                 </button>
               ))}
             </div>
           </div>
         )}
+
         <Input
           label="Observações (opcional)"
           placeholder="Notas adicionais…"
@@ -163,11 +227,19 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           onChange={(e) => setNotes(e.target.value)}
           maxLength={200}
         />
-        {fieldError('form') && <p className="text-xs text-red-400 -mt-1">{fieldError('form')}</p>}
+
+        {fieldError('form') && (
+          <p className="text-xs -mt-1" style={{ color: 'var(--red)' }}>{fieldError('form')}</p>
+        )}
+
         <div className="flex gap-3 pt-1">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
           <Button type="submit" loading={loading} className="flex-[2]">
-            {isEdit ? 'Salvar alterações' : 'Adicionar lançamento'}
+            {isEdit
+              ? 'Salvar alterações'
+              : installments > 1
+              ? `Criar ${installments} parcelas`
+              : 'Adicionar lançamento'}
           </Button>
         </div>
       </form>
