@@ -114,3 +114,20 @@ input:-webkit-autofill {
     font-size: 16px !important;
   }
 }
+
+/* Date input — dark theme calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6) brightness(0.8);
+  cursor: pointer;
+  opacity: 0.5;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+
+/* Select — hide default arrow (we use custom ChevronDown) */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}

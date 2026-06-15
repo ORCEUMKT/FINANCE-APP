@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ChevronDown, Minus, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -190,26 +191,35 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           <div className="flex flex-col gap-1.5">
             {fieldLabel('Parcelas')}
             <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                max={60}
-                value={installments}
-                onChange={(e) => setInstallments(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))}
-                className="w-20 rounded-[12px] px-3 py-2 text-sm text-center tabular"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-1)',
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                }}
-              />
+              <div
+                className="flex items-center rounded-[12px] overflow-hidden"
+                style={{ border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setInstallments(Math.max(1, installments - 1))}
+                  className="w-9 h-9 flex items-center justify-center transition-colors hover:bg-white/[.06]"
+                  style={{ color: 'var(--text-3)', borderRight: '1px solid var(--border)' }}
+                >
+                  <Minus size={13} />
+                </button>
+                <span
+                  className="w-10 h-9 flex items-center justify-center text-sm font-semibold tabular"
+                  style={{ color: 'var(--text-1)' }}
+                >
+                  {installments}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setInstallments(Math.min(60, installments + 1))}
+                  className="w-9 h-9 flex items-center justify-center transition-colors hover:bg-white/[.06]"
+                  style={{ color: 'var(--text-3)', borderLeft: '1px solid var(--border)' }}
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
               <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                {installments === 1
-                  ? 'à vista'
-                  : `${installments}× — datas automáticas (+1 mês cada`}
-                {installments > 1 ? ')' : ''}
+                {installments === 1 ? 'à vista' : `${installments}× parcelado (+1 mês/parcela)`}
               </span>
             </div>
           </div>
@@ -217,22 +227,29 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
         <div className="flex flex-col gap-1.5">
           {fieldLabel('Categoria')}
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full rounded-[12px] px-4 py-2 text-sm outline-none"
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-1)',
-              fontFamily: 'inherit',
-            }}
-          >
-            <option value="">Sem categoria</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full rounded-[12px] px-4 py-2 pr-9 text-sm outline-none appearance-none"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-1)',
+                fontFamily: 'inherit',
+              }}
+            >
+              <option value="">Sem categoria</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <ChevronDown
+              size={14}
+              className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: 'var(--text-3)' }}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
