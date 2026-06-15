@@ -8,26 +8,28 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', loading, children, disabled, style, ...props }, ref) => {
+    const variantStyle: React.CSSProperties =
+      variant === 'primary'   ? { background: 'var(--accent)', color: '#fff', boxShadow: 'var(--glow-accent)' } :
+      variant === 'secondary' ? { background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)' } :
+      variant === 'ghost'     ? { background: 'transparent', color: 'var(--text-2)' } :
+                                { background: 'rgba(244,115,115,0.08)', border: '1px solid rgba(244,115,115,0.18)', color: '#f47373' }
+
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed',
+          'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 disabled:opacity-35 disabled:cursor-not-allowed active:scale-[.97]',
           {
-            'bg-[#5b8af5] text-white hover:bg-[#4a79e4] active:scale-[.98]': variant === 'primary',
-            'bg-[#1e2235] border border-[#2a2f4a] text-[#c5c8e0] hover:bg-[#232840] hover:text-white': variant === 'secondary',
-            'bg-transparent text-[#8b92b5] hover:text-white hover:bg-[#1e2235]': variant === 'ghost',
-            'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15': variant === 'danger',
-          },
-          {
-            'h-8 px-3 text-xs': size === 'sm',
-            'h-10 px-4 text-sm': size === 'md',
-            'h-12 px-5 text-base': size === 'lg',
+            'rounded-[12px]': true,
+            'h-8 px-3 text-[12px]': size === 'sm',
+            'h-10 px-4 text-[13px]': size === 'md',
+            'h-12 px-5 text-[14px]': size === 'lg',
           },
           className
         )}
+        style={{ ...variantStyle, ...style }}
         {...props}
       >
         {loading ? (

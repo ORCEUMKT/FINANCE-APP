@@ -16,20 +16,24 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center px-2 pb-safe bg-[#141729] border-t border-[#2a2f4a]">
+    <nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center px-2 pb-safe"
+      style={{
+        background: 'var(--sidebar)',
+        borderTop: '1px solid var(--border)',
+      }}
+    >
       {NAV.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         return (
           <Link
             key={href}
             href={href}
-            className={cn(
-              'flex-1 flex flex-col items-center gap-1 py-3 transition-colors duration-150',
-              active ? 'text-[#5b8af5]' : 'text-[#8b92b5] hover:text-[#c5c8e0]'
-            )}
+            className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-colors duration-150')}
+            style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
           >
-            <Icon size={19} />
-            <span className="text-[9px] font-bold uppercase tracking-wide">{label}</span>
+            <Icon size={18} />
+            <span className="text-[9px] font-medium uppercase tracking-wide">{label}</span>
           </Link>
         )
       })}

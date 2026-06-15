@@ -1,45 +1,123 @@
 @import "tailwindcss";
 
-* { box-sizing: border-box; }
+/* ─── Design Tokens ──────────────────────────────────────────── */
+:root {
+  /* Depth layers */
+  --bg:          #0b0d1a;
+  --surface:     #0f1221;
+  --surface-2:   #141829;
+  --sidebar:     #090b18;
+  --hover:       #181c2d;
+  --active:      #1a1f33;
 
+  /* Borders */
+  --border:      rgba(150,160,220,0.08);
+  --border-md:   rgba(150,160,220,0.12);
+  --border-strong: rgba(150,160,220,0.18);
+
+  /* Text */
+  --text-1:  #dde0f0;
+  --text-2:  #6b728f;
+  --text-3:  #3a4060;
+
+  /* Accent — blue primary */
+  --accent:       #5b8af5;
+  --accent-dim:   rgba(91,138,245,0.10);
+  --accent-glow:  rgba(91,138,245,0.14);
+
+  /* Status */
+  --green:   #3ecf8e;
+  --red:     #f47373;
+  --yellow:  #f5c842;
+  --purple:  #a78bfa;
+  --orange:  #f59e42;
+
+  /* Shadows */
+  --shadow-card: 0 2px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  --shadow-elevated: 0 8px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  --glow-accent: 0 0 24px rgba(91,138,245,0.10);
+
+  /* Radius */
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 24px;
+}
+
+/* ─── Base ────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
 body {
-  color: #e2e4f0;
+  color: var(--text-1);
   font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #181b2e;
+  background: var(--bg);
   min-height: 100vh;
   overflow-x: hidden;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: #2a2f4a; border-radius: 99px; }
+/* Very subtle top ambient light */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(91,138,245,0.05), transparent);
+  z-index: 0;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(150,160,220,0.12); border-radius: 99px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-.action-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 10px; border-radius: 8px;
-  border: 1px solid #2a2f4a;
-  background: #1e2235; color: #8b92b5;
-  font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s ease;
-}
-.action-btn:hover { background: #232840; color: #e2e4f0; }
-
-.pb-safe { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-
+/* ─── Form controls ───────────────────────────────────────────── */
 select, textarea {
-  background: #1e2235;
-  border: 1px solid #2a2f4a;
-  border-radius: 10px;
-  color: #e2e4f0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
   outline: none;
   transition: border-color .15s ease;
+  font-family: inherit;
 }
-select:focus, textarea:focus { border-color: rgba(91,138,245,.5); }
-
-select option { background: #1e2235; color: #e2e4f0; }
+select:focus, textarea:focus {
+  border-color: var(--border-strong);
+}
+select option { background: var(--surface-2); color: var(--text-1); }
 
 input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 30px #1e2235 inset !important;
-  -webkit-text-fill-color: #e2e4f0 !important;
+  -webkit-box-shadow: 0 0 0 30px var(--surface) inset !important;
+  -webkit-text-fill-color: var(--text-1) !important;
 }
+
+/* ─── Numeric figures (tabular) ───────────────────────────────── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ─── Utility: action buttons in transaction cards ────────────── */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.action-btn:hover {
+  background: var(--hover);
+  color: var(--text-1);
+  border-color: var(--border-md);
+}
+
+/* ─── Safe area (mobile) ──────────────────────────────────────── */
+.pb-safe { padding-bottom: max(12px, env(safe-area-inset-bottom)); }

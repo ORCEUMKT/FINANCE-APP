@@ -18,7 +18,7 @@ const NAV = [
 
 export function Sidebar({ user }: { user: User | null }) {
   const pathname = usePathname()
-  const router = useRouter()
+  const router   = useRouter()
   const { toast } = useToast()
 
   async function handleSignOut() {
@@ -30,17 +30,34 @@ export function Sidebar({ user }: { user: User | null }) {
   const name = user?.user_metadata?.name ?? user?.email ?? ''
 
   return (
-    <aside className="hidden lg:flex flex-col sticky top-0 h-screen w-56 shrink-0 bg-[#141729] border-r border-[#2a2f4a]">
+    <aside
+      className="hidden lg:flex flex-col sticky top-0 h-screen w-56 shrink-0 relative z-10"
+      style={{
+        background: 'var(--sidebar)',
+        borderRight: '1px solid var(--border)',
+      }}
+    >
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-[#2a2f4a]">
-        <div className="w-7 h-7 rounded-lg bg-[#5b8af5] flex items-center justify-center flex-shrink-0">
+      <div
+        className="flex items-center gap-3 px-5 h-16"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <div
+          className="w-7 h-7 rounded-[10px] flex items-center justify-center flex-shrink-0"
+          style={{ background: 'var(--accent)', boxShadow: 'var(--glow-accent)' }}
+        >
           <TrendingUp size={14} className="text-white" />
         </div>
-        <span className="text-sm font-semibold text-white tracking-wide">Finance</span>
+        <span
+          className="text-[13px] font-semibold tracking-[0.04em]"
+          style={{ color: 'var(--text-1)' }}
+        >
+          Finance
+        </span>
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-col gap-0.5 flex-1 px-3 py-4">
+      <nav className="flex flex-col gap-0.5 flex-1 px-3 py-5">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
@@ -48,13 +65,23 @@ export function Sidebar({ user }: { user: User | null }) {
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
-                active
-                  ? 'bg-[#5b8af5]/15 text-white'
-                  : 'text-[#8b92b5] hover:text-[#c5c8e0] hover:bg-[#1e2235]'
+                'flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13px] font-medium transition-all duration-150 group',
               )}
+              style={{
+                background: active ? 'var(--accent-dim)' : 'transparent',
+                color: active ? 'var(--text-1)' : 'var(--text-2)',
+              }}
+              onMouseEnter={e => {
+                if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--hover)'
+              }}
+              onMouseLeave={e => {
+                if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
+              }}
             >
-              <Icon size={16} className={active ? 'text-[#5b8af5]' : ''} />
+              <Icon
+                size={15}
+                style={{ color: active ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}
+              />
               {label}
             </Link>
           )
@@ -62,21 +89,42 @@ export function Sidebar({ user }: { user: User | null }) {
       </nav>
 
       {/* User */}
-      <div className="border-t border-[#2a2f4a] px-3 py-4 flex flex-col gap-0.5">
+      <div
+        className="px-3 py-4 flex flex-col gap-0.5"
+        style={{ borderTop: '1px solid var(--border)' }}
+      >
         <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
-          <div className="w-7 h-7 rounded-full bg-[#5b8af5]/20 border border-[#5b8af5]/30 flex items-center justify-center text-[10px] font-bold text-[#5b8af5] flex-shrink-0">
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+            style={{
+              background: 'var(--accent-dim)',
+              border: '1px solid rgba(91,138,245,0.2)',
+              color: 'var(--accent)',
+            }}
+          >
             {getInitials(name)}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-white truncate">{name}</p>
-            <p className="text-[10px] text-[#8b92b5] truncate">{user?.email}</p>
+            <p className="text-[12px] font-medium truncate" style={{ color: 'var(--text-1)' }}>{name}</p>
+            <p className="text-[10px] truncate" style={{ color: 'var(--text-3)' }}>{user?.email}</p>
           </div>
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#8b92b5] hover:text-red-400 hover:bg-red-500/[.08] transition-all"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13px] font-medium transition-all duration-150"
+          style={{ color: 'var(--text-2)' }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLElement
+            el.style.background = 'rgba(244,115,115,0.06)'
+            el.style.color = '#f47373'
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLElement
+            el.style.background = 'transparent'
+            el.style.color = 'var(--text-2)'
+          }}
         >
-          <LogOut size={16} />
+          <LogOut size={15} style={{ flexShrink: 0 }} />
           Sair
         </button>
       </div>

@@ -23,24 +23,27 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: 'rgba(7,8,18,0.75)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className={cn(
-          'w-full sm:max-w-lg bg-[#1e2235]',
-          'border border-[#2a2f4a] rounded-t-2xl sm:rounded-2xl',
-          'max-h-[92vh] overflow-y-auto shadow-[0_24px_60px_rgba(0,0,0,.5)]',
-          'p-6',
-          className
-        )}
+        className={cn('w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[20px] max-h-[92vh] overflow-y-auto p-6', className)}
+        style={{
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-md)',
+          boxShadow: 'var(--shadow-elevated)',
+        }}
       >
         {title && (
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-bold text-white">{title}</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>{title}</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-xl border border-[#2a2f4a] bg-[#232840] text-[#8b92b5] hover:text-white hover:bg-[#2a2f4a] transition-all flex items-center justify-center"
+              className="w-8 h-8 rounded-[10px] flex items-center justify-center transition-all duration-150"
+              style={{ background: 'var(--hover)', color: 'var(--text-2)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)' }}
             >
               <X size={14} />
             </button>
