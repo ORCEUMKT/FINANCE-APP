@@ -43,8 +43,8 @@ export function DonutChart({ data, total, onCategoryClick }: DonutChartProps) {
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="relative">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+      <div className="relative w-full max-w-[200px]">
+        <svg width="100%" viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
           {segments.map(({ d, item }) => (
             <path
               key={item.category_name}

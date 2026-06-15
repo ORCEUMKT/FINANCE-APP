@@ -32,8 +32,8 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
 
-      {/* Page header — FLOWTASK pattern: left accent bar */}
-      <div className="flex items-start justify-between gap-4">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-start gap-4">
           <div
             className="w-[3px] h-12 rounded-full mt-0.5 flex-shrink-0"
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric cards — number as focal point */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard
           label="Despesas"
           value={metrics.totalExpenses}
