@@ -20,7 +20,7 @@ export function Sidebar({ user: _ }: { user: unknown }) {
     <aside
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
-      className="hidden lg:flex flex-col absolute left-0 top-0 bottom-0 z-20 overflow-hidden"
+      className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 z-20 overflow-hidden"
       style={{
         width: open ? '200px' : '64px',
         transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
@@ -120,8 +120,7 @@ function NavItem({
         background: bg,
         border,
         color,
-        justifyContent: open ? 'flex-start' : 'center',
-        padding: open ? '0 12px' : '0',
+        paddingLeft: open ? '14px' : '22px',
         boxShadow: active ? '0 0 16px rgba(124,90,252,0.08)' : 'none',
         transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
       }}
@@ -136,18 +135,20 @@ function NavItem({
         }}
       />
 
-      {/* Icon */}
+      {/* Icon — always visible, fixed position */}
       <span className="flex items-center justify-center w-5 h-5 flex-shrink-0">
         <Icon size={17} />
       </span>
 
-      {/* Label */}
+      {/* Label — fades in when expanded */}
       <span
-        className="text-[12px] font-medium ml-2.5 flex-shrink-0"
+        className="text-[12px] font-medium flex-shrink-0"
         style={{
+          marginLeft: '10px',
           opacity: open ? 1 : 0,
-          transform: open ? 'translateX(0)' : 'translateX(-6px)',
+          transform: open ? 'translateX(0)' : 'translateX(-4px)',
           transition: 'opacity 0.18s, transform 0.18s',
+          pointerEvents: 'none',
         }}
       >
         {label}
