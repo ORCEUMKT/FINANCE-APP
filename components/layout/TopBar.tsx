@@ -28,9 +28,9 @@ export function TopBar({ user }: { user: User | null }) {
       <div className="flex items-center h-full py-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo/logo.png"
+          src="/logo/logo.png?v=2"
           alt="Logo"
-          style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
+          style={{ height: '20px', width: 'auto', objectFit: 'contain' }}
         />
       </div>
 
