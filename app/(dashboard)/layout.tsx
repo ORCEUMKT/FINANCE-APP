@@ -22,9 +22,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <TopBar user={user} />
 
       {/* Content below topbar */}
-      <div className="flex flex-1 pt-11">
+      <div className="flex flex-1 pt-11 relative">
         <Sidebar user={user} />
-        <main className="flex-1 min-w-0 pb-24 lg:pb-0 overflow-y-auto relative z-10">
+        {/* pl-14 = sidebar collapsed width so content never shifts on hover */}
+        <main className="flex-1 min-w-0 pb-24 lg:pb-0 overflow-y-auto relative z-10 lg:pl-14">
           <div className="max-w-[1100px] mx-auto px-8 py-8">
             {children}
           </div>

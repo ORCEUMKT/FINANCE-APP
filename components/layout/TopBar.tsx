@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
 import { signOut } from '@/services/authService'
@@ -9,7 +8,7 @@ import { getInitials } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
 export function TopBar({ user }: { user: User | null }) {
-  const router  = useRouter()
+  const router   = useRouter()
   const { toast } = useToast()
   const name = user?.user_metadata?.name ?? user?.email ?? ''
   const displayName = name.includes('@') ? name.split('@')[0] : name
@@ -25,22 +24,18 @@ export function TopBar({ user }: { user: User | null }) {
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 h-11"
       style={{ background: 'var(--sidebar)', borderBottom: '1px solid var(--border)' }}
     >
-      {/* Logo */}
+      {/* Logo — plain <img> to avoid Next.js Image path issues */}
       <div className="flex items-center h-full py-2">
-        <Image
-          src="/logo/Ativo%202.png"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo/logo.png"
           alt="Logo"
-          width={120}
-          height={32}
-          className="object-contain"
-          style={{ height: '22px', width: 'auto' }}
-          priority
+          style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
         />
       </div>
 
       {/* Right side */}
       <div className="flex items-center gap-1">
-        {/* User pill */}
         <div
           className="flex items-center gap-2 px-3 h-7 rounded-[8px]"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}
@@ -55,8 +50,6 @@ export function TopBar({ user }: { user: User | null }) {
             {displayName}
           </span>
         </div>
-
-        {/* Logout */}
         <button
           onClick={handleSignOut}
           title="Sair"
