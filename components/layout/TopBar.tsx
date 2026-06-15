@@ -30,7 +30,7 @@ export function TopBar({ user }: { user: User | null }) {
         <img
           src="/logo/logo.png"
           alt="Logo"
-          style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
+          style={{ height: '16px', width: 'auto', objectFit: 'contain' }}
         />
       </div>
 
