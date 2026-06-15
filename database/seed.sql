@@ -1,0 +1,21 @@
+-- ============================================================
+-- SEED — default categories (called after user signs up)
+-- This is handled server-side via the seedDefaultCategories service
+-- Listed here for reference only
+-- ============================================================
+
+-- Default categories inserted per user on first login:
+-- ('Chácara / Manutenção',   'tree',        '#4ECCA3', 'expense')
+-- ('Alimentação / Lazer',    'utensils',    '#F7B731', 'expense')
+-- ('Funcionários Domésticos','users',       '#A29BFE', 'expense')
+-- ('Lazer / Motocross',      'bike',        '#FD79A8', 'expense')
+-- ('Igreja / Religião',      'church',      '#74B9FF', 'expense')
+-- ('Contabilidade',          'file-text',   '#55EFC4', 'expense')
+-- ('Veículo',                'car',         '#FDCB6E', 'expense')
+-- ('Casa / Serviços',        'home',        '#E17055', 'expense')
+-- ('Pessoal / Beleza',       'scissors',    '#FFA8C5', 'expense')
+-- ('Documentação',           'file',        '#81ECEC', 'expense')
+-- ('Presentes / Família',    'gift',        '#FFD32A', 'expense')
+-- ('Mercado',                'shopping-bag','#C7A0FF', 'expense')
+-- ('Receita / Entrada',      'arrow-down',  '#89F2C2', 'income')
+-- ('A Recuperar',            'rotate-ccw',  '#FF7584', 'recover')

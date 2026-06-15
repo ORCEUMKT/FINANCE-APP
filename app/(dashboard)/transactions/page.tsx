@@ -1,0 +1,201 @@
+'use client'
+
+import { useState, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
+import { useTransactions } from '@/hooks/useTransactions'
+import { useCategories } from '@/hooks/useCategories'
+import { TransactionCard } from '@/components/transactions/TransactionCard'
+import { TransactionForm } from '@/components/transactions/TransactionForm'
+import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { useToast } from '@/components/ui/Toast'
+import { formatCurrency } from '@/lib/formatters'
+import type { Transaction, TransactionInsert } from '@/types/transaction'
+
+export default function TransactionsPage() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const { toast } = useToast()
+
+  const [search, setSearch]         = useState(params.get('search') ?? '')
+  const [catFilter, setCatFilter]   = useState(params.get('category') ?? '')
+  const [dateFrom, setDateFrom]     = useState(params.get('date_from') ?? '')
+  const [dateTo, setDateTo]         = useState(params.get('date_to') ?? '')
+  const [showFilters, setShowFilters] = useState(false)
+  const [formOpen, setFormOpen]     = useState(false)
+  const [editing, setEditing]       = useState<Transaction | null>(null)
+  const [deletedBuffer, setDeletedBuffer] = useState<Transaction | null>(null)
+
+  const filters = {
+    search: search || undefined,
+    category_id: catFilter || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  }
+
+  const { transactions, loading, add, update, remove, duplicate, markRecovered } = useTransactions(filters)
+  const { categories } = useCategories()
+
+  const handleSubmit = useCallback(async (data: TransactionInsert) => {
+    if (editing) {
+      await update(editing.id, data)
+      toast('Lançamento atualizado!')
+    } else {
+      await add(data)
+      toast('Lançamento adicionado!')
+    }
+    setEditing(null)
+    setFormOpen(false)
+  }, [editing, add, update, toast])
+
+  const handleDelete = useCallback(async (id: string) => {
+    const tx = transactions.find((t) => t.id === id)
+    if (!tx) return
+    setDeletedBuffer(tx)
+    await remove(id)
+    toast('Lançamento excluído.', {
+      action: {
+        label: 'Desfazer',
+        onClick: async () => {
+          if (!deletedBuffer) return
+          await add({
+            description: deletedBuffer.description,
+            value: deletedBuffer.value,
+            date: deletedBuffer.date,
+            category_id: deletedBuffer.category_id,
+            type: deletedBuffer.type,
+            status: deletedBuffer.status,
+            notes: deletedBuffer.notes,
+          })
+          toast('Exclusão desfeita!')
+        },
+      },
+    })
+  }, [transactions, remove, add, toast, deletedBuffer])
+
+  const handleDuplicate = useCallback(async (id: string) => {
+    await duplicate(id)
+    toast('Lançamento duplicado!')
+  }, [duplicate, toast])
+
+  const handleMarkRecovered = useCallback(async (id: string) => {
+    await markRecovered(id)
+    toast('Marcado como recuperado!')
+  }, [markRecovered, toast])
+
+  const clearFilters = () => { setSearch(''); setCatFilter(''); setDateFrom(''); setDateTo('') }
+  const hasFilters = search || catFilter || dateFrom || dateTo
+  const total = transactions.reduce((s, t) => s + t.value, 0)
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-800 text-white">Extrato</h1>
+          <p className="text-xs text-white/35 mt-0.5">
+            {loading ? 'Carregando…' : `${transactions.length} lançamentos · ${formatCurrency(total)}`}
+          </p>
+        </div>
+        <Button onClick={() => { setEditing(null); setFormOpen(true) }} size="sm" className="gap-1.5">
+          <Plus size={13} /> Novo
+        </Button>
+      </div>
+
+      {/* Search + filters */}
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+            <input
+              className="w-full bg-white/[.05] border border-white/[.09] rounded-2xl pl-9 pr-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/20 focus:bg-white/[.07] transition-all"
+              placeholder="Buscar lançamento…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={`w-11 h-11 flex items-center justify-center rounded-2xl border transition-all ${
+              showFilters || hasFilters ? 'bg-white/[.1] border-white/20 text-white' : 'bg-white/[.04] border-white/[.09] text-white/40 hover:text-white hover:bg-white/[.07]'
+            }`}
+          >
+            <SlidersHorizontal size={15} />
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-2 gap-2 p-4 bg-white/[.03] border border-white/[.07] rounded-2xl">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-widest text-white/30">Categoria</label>
+              <select
+                value={catFilter}
+                onChange={(e) => setCatFilter(e.target.value)}
+                className="bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none"
+              >
+                <option value="">Todas</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-widest text-white/30">De</label>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-widest text-white/30">Até</label>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+            </div>
+            <div className="flex items-end">
+              <button onClick={clearFilters} className="text-xs text-white/40 hover:text-white transition-colors flex items-center gap-1.5">
+                <X size={11} /> Limpar filtros
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <div className="flex justify-center py-14">
+          <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      ) : transactions.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {transactions.map((tx) => (
+            <TransactionCard
+              key={tx.id}
+              transaction={tx}
+              onEdit={(t) => { setEditing(t); setFormOpen(true) }}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+              onMarkRecovered={handleMarkRecovered}
+            />
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={Search}
+          title={hasFilters ? 'Nenhum resultado' : 'Sem lançamentos'}
+          description={hasFilters ? 'Tente ajustar os filtros' : 'Clique em "Novo" para adicionar seu primeiro lançamento'}
+          action={hasFilters ? <Button variant="secondary" size="sm" onClick={clearFilters}>Limpar filtros</Button> : undefined}
+        />
+      )}
+
+      <TransactionForm
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setEditing(null) }}
+        onSubmit={handleSubmit}
+        categories={categories}
+        editingTransaction={editing}
+      />
+    </div>
+  )
+}
