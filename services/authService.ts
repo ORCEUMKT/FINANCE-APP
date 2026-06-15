@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/client'
-import { seedDefaultCategories } from './categoriesService'
 
 export async function signIn(email: string, password: string) {
   const supabase = createClient()
@@ -15,7 +14,6 @@ export async function signUp(email: string, password: string, name: string) {
     options: { data: { name } },
   })
   if (error) throw error
-  await seedDefaultCategories()
 }
 
 export async function signOut() {

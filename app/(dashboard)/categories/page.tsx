@@ -6,7 +6,6 @@ import { useCategories } from '@/hooks/useCategories'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { validateCategory } from '@/lib/validations'
@@ -18,14 +17,18 @@ const PRESET_COLORS = [
   '#FF7584','#89F2C2',
 ]
 
-const PRESET_ICONS = [
-  'home','utensils','car','tag','heart','gift','briefcase','book',
-  'music','coffee','tree','users','file-text','shopping-bag',
-]
-
 interface FormState { name: string; color: string; icon: string; type: Category['type'] }
-
 const DEFAULT_FORM: FormState = { name: '', color: '#A29BFE', icon: 'tag', type: 'expense' }
+
+const TYPE_LABEL: Record<Category['type'], string> = { expense: 'Despesa', income: 'Receita', both: 'Ambos' }
+const TYPE_COLOR: Record<Category['type'], string> = { expense: 'var(--red)', income: 'var(--green)', both: 'var(--blue)' }
+
+const segBtnStyle = (active: boolean): React.CSSProperties => ({
+  flex: 1, padding: '10px 0', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
+  border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+  background: active ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+  color: active ? '#fff' : 'var(--text-3)', cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
+})
 
 export default function CategoriesPage() {
   const { categories, loading, add, update, remove } = useCategories()
@@ -35,6 +38,7 @@ export default function CategoriesPage() {
   const [form, setForm]           = useState<FormState>(DEFAULT_FORM)
   const [formError, setFormError] = useState('')
   const [saving, setSaving]       = useState(false)
+  const [deleting, setDeleting]   = useState<string | null>(null)
 
   function openAdd() {
     setEditing(null); setForm(DEFAULT_FORM); setFormError(''); setFormOpen(true)
@@ -69,17 +73,26 @@ export default function CategoriesPage() {
   }
 
   async function handleDelete(cat: Category) {
-    if (!confirm(`Excluir a categoria "${cat.name}"? Os lançamentos vinculados ficarão sem categoria.`)) return
-    await remove(cat.id)
-    toast('Categoria excluída.')
+    if (!confirm(`Excluir "${cat.name}"?\n\nLançamentos vinculados ficarão sem categoria.`)) return
+    setDeleting(cat.id)
+    try {
+      await remove(cat.id)
+      toast('Categoria excluída.')
+    } finally {
+      setDeleting(null)
+    }
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-800 text-white">Categorias</h1>
-          <p className="text-xs text-white/35 mt-0.5">{categories.length} categorias</p>
+        <div className="flex items-start gap-4">
+          <div className="w-[3px] h-12 rounded-full mt-0.5 flex-shrink-0" style={{ background: 'var(--accent)', boxShadow: 'var(--glow-accent)' }} />
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-[2.5px] mb-1.5" style={{ color: 'var(--accent)' }}>Configurações</p>
+            <h1 className="text-[22px] font-bold leading-none" style={{ color: 'var(--text-1)' }}>Categorias</h1>
+          </div>
         </div>
         <Button onClick={openAdd} size="sm" className="gap-1.5">
           <Plus size={13} /> Nova
@@ -88,42 +101,37 @@ export default function CategoriesPage() {
 
       {loading ? (
         <div className="flex justify-center py-14">
-          <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <div
+            className="w-6 h-6 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'var(--border-md)', borderTopColor: 'var(--accent)' }}
+          />
         </div>
-      ) : categories.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {categories.map((cat) => (
-            <Card key={cat.id} className="flex items-center gap-4 px-4 py-3.5">
-              <span
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-900 flex-shrink-0"
-                style={{ background: `${cat.color}22`, color: cat.color }}
-              >
-                {cat.name.charAt(0).toUpperCase()}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-700 text-white truncate">{cat.name}</div>
-                <div className="text-[11px] text-white/35 mt-0.5">
-                  {cat.type === 'expense' ? 'Despesa' : cat.type === 'income' ? 'Receita' : 'Ambos'}
-                  {cat.is_default && ' · Padrão'}
-                </div>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <button onClick={() => openEdit(cat)} className="action-btn">
-                  <Edit2 size={11} />
-                </button>
-                {!cat.is_default && (
-                  <button onClick={() => handleDelete(cat)} className="action-btn !text-red-400 !border-red-500/25 !bg-red-500/[.06]">
-                    <Trash2 size={11} />
-                  </button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
+      ) : categories.length === 0 ? (
+        <EmptyState
+          icon={Tag}
+          title="Sem categorias"
+          description="Crie categorias para organizar seus lançamentos"
+        />
       ) : (
-        <EmptyState icon={Tag} title="Sem categorias" description="Crie sua primeira categoria" />
+        <>
+          <p className="text-xs -mt-3" style={{ color: 'var(--text-3)' }}>
+            {categories.length} {categories.length === 1 ? 'categoria' : 'categorias'}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {categories.map((cat) => (
+              <CategoryCard
+                key={cat.id}
+                cat={cat}
+                isDeleting={deleting === cat.id}
+                onEdit={() => openEdit(cat)}
+                onDelete={() => handleDelete(cat)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
+      {/* Form Modal */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? 'Editar Categoria' : 'Nova Categoria'}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
@@ -131,57 +139,164 @@ export default function CategoriesPage() {
             placeholder="Ex: Alimentação"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            required maxLength={60}
+            required
+            maxLength={60}
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-700 uppercase tracking-[2px] text-white/40">Tipo</label>
+            <label className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>
+              Tipo
+            </label>
             <div className="flex gap-2">
-              {(['expense','income','both'] as const).map((t) => (
-                <button key={t} type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: t }))}
-                  className={`flex-1 py-2.5 rounded-xl text-[11px] font-700 border transition-all ${
-                    form.type === t ? 'bg-white text-[#050506] border-white' : 'bg-white/[.04] text-white/40 border-white/10 hover:bg-white/[.08]'
-                  }`}
-                >
+              {(['expense', 'income', 'both'] as const).map((t) => (
+                <button key={t} type="button" onClick={() => setForm((f) => ({ ...f, type: t }))} style={segBtnStyle(form.type === t)}>
                   {t === 'expense' ? 'Despesa' : t === 'income' ? 'Receita' : 'Ambos'}
                 </button>
               ))}
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-700 uppercase tracking-[2px] text-white/40">Cor</label>
+            <label className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>
+              Cor
+            </label>
             <div className="flex flex-wrap gap-2">
               {PRESET_COLORS.map((c) => (
                 <button
-                  key={c} type="button"
+                  key={c}
+                  type="button"
                   onClick={() => setForm((f) => ({ ...f, color: c }))}
                   className="w-7 h-7 rounded-lg border-2 transition-transform hover:scale-110"
                   style={{ background: c, borderColor: form.color === c ? '#fff' : 'transparent' }}
                 />
               ))}
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="color" value={form.color}
-                onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-                className="w-8 h-8 rounded-lg border border-white/10 bg-transparent cursor-pointer"
+            {/* Preview + hex input */}
+            <div className="flex items-center gap-2 mt-1">
+              <div
+                className="w-8 h-8 rounded-[10px] flex-shrink-0"
+                style={{ background: form.color, boxShadow: `0 0 12px ${form.color}55` }}
               />
               <input
-                value={form.color} onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-                className="bg-white/[.05] border border-white/10 rounded-xl px-3 py-2 text-sm text-white w-28 outline-none"
+                type="color"
+                value={form.color}
+                onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                className="w-8 h-8 rounded-lg cursor-pointer opacity-0 absolute"
+              />
+              <input
+                value={form.color}
+                onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                className="rounded-xl px-3 py-2 text-sm w-28 outline-none font-mono"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
                 placeholder="#RRGGBB"
               />
             </div>
           </div>
-          {formError && <p className="text-xs text-red-400">{formError}</p>}
+          {formError && <p className="text-xs" style={{ color: 'var(--red)' }}>{formError}</p>}
           <div className="flex gap-3 pt-1">
-            <Button type="button" variant="secondary" onClick={() => setFormOpen(false)} className="flex-1">Cancelar</Button>
+            <Button type="button" variant="secondary" onClick={() => setFormOpen(false)} className="flex-1">
+              Cancelar
+            </Button>
             <Button type="submit" loading={saving} className="flex-[2]">
               {editing ? 'Salvar' : 'Criar categoria'}
             </Button>
           </div>
         </form>
       </Modal>
+    </div>
+  )
+}
+
+function CategoryCard({
+  cat, isDeleting, onEdit, onDelete,
+}: {
+  cat: Category
+  isDeleting: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="relative rounded-[18px] p-4 flex flex-col gap-3 select-none"
+      style={{
+        background: hovered ? `color-mix(in srgb, ${cat.color} 6%, rgba(18,18,28,0.7))` : 'rgba(18,18,28,0.55)',
+        border: `1px solid ${hovered ? cat.color + '50' : 'rgba(255,255,255,0.09)'}`,
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        boxShadow: hovered
+          ? `inset 0 1px 0 rgba(255,255,255,0.09), 0 8px 32px rgba(0,0,0,0.4), 0 0 24px ${cat.color}20`
+          : 'inset 0 1px 0 rgba(255,255,255,0.07), 0 4px 16px rgba(0,0,0,0.3)',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+      }}
+    >
+      {/* Top row: initial + actions */}
+      <div className="flex items-start justify-between">
+        <div
+          className="w-11 h-11 rounded-[14px] flex items-center justify-center text-lg font-bold flex-shrink-0"
+          style={{
+            background: `${cat.color}18`,
+            color: cat.color,
+            boxShadow: hovered ? `0 0 16px ${cat.color}30` : 'none',
+            transition: 'box-shadow 0.2s',
+          }}
+        >
+          {cat.name.charAt(0).toUpperCase()}
+        </div>
+
+        {/* Action buttons */}
+        <div
+          className="flex gap-1.5"
+          style={{
+            opacity: hovered ? 1 : 0,
+            transform: hovered ? 'translateY(0)' : 'translateY(-4px)',
+            transition: 'opacity 0.18s, transform 0.18s',
+          }}
+        >
+          <button
+            onClick={onEdit}
+            className="w-7 h-7 rounded-[8px] flex items-center justify-center transition-colors"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            title="Editar"
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)' }}
+          >
+            <Edit2 size={11} />
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="w-7 h-7 rounded-[8px] flex items-center justify-center transition-colors"
+            style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171' }}
+            title="Excluir"
+          >
+            <Trash2 size={11} />
+          </button>
+        </div>
+      </div>
+
+      {/* Name + type */}
+      <div className="flex-1">
+        <div className="text-[13px] font-semibold leading-snug" style={{ color: 'var(--text-1)' }}>
+          {cat.name}
+        </div>
+        <span className="text-[10px] font-medium mt-0.5 block" style={{ color: TYPE_COLOR[cat.type] }}>
+          {TYPE_LABEL[cat.type]}
+        </span>
+      </div>
+
+      {/* Bottom accent line */}
+      <div
+        className="absolute bottom-0 left-4 right-4 rounded-full"
+        style={{
+          height: '2px',
+          background: cat.color,
+          opacity: hovered ? 0.55 : 0.18,
+          transition: 'opacity 0.2s',
+        }}
+      />
     </div>
   )
 }
