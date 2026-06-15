@@ -1,48 +1,41 @@
 @import "tailwindcss";
 
-/* ─── Design Tokens ──────────────────────────────────────────── */
+/* ─── Design Tokens — FLOWTASK Language ─────────────────────── */
 :root {
-  /* Depth layers */
-  --bg:          #0b0d1a;
-  --surface:     #0f1221;
-  --surface-2:   #141829;
-  --sidebar:     #090b18;
-  --hover:       #181c2d;
-  --active:      #1a1f33;
+  /* Depth layers — neutral near-void, no blue tint */
+  --bg:        #0b0b0f;
+  --surface:   #111116;
+  --surface-2: #16161d;
+  --sidebar:   #080810;
+  --hover:     #1a1a24;
+  --active:    #1e1e2a;
 
-  /* Borders */
-  --border:      rgba(150,160,220,0.08);
-  --border-md:   rgba(150,160,220,0.12);
-  --border-strong: rgba(150,160,220,0.18);
+  /* Borders — near-invisible */
+  --border:       rgba(255,255,255,0.05);
+  --border-md:    rgba(255,255,255,0.08);
+  --border-strong:rgba(255,255,255,0.12);
 
   /* Text */
-  --text-1:  #dde0f0;
-  --text-2:  #6b728f;
-  --text-3:  #3a4060;
+  --text-1: #e6e6f0;
+  --text-2: #606070;
+  --text-3: #333340;
 
-  /* Accent — blue primary */
-  --accent:       #5b8af5;
-  --accent-dim:   rgba(91,138,245,0.10);
-  --accent-glow:  rgba(91,138,245,0.14);
+  /* Accent — purple */
+  --accent:      #7c5afc;
+  --accent-dim:  rgba(124,90,252,0.10);
+  --accent-glow: rgba(124,90,252,0.18);
 
-  /* Status */
+  /* Status palette */
   --green:   #3ecf8e;
-  --red:     #f47373;
-  --yellow:  #f5c842;
-  --purple:  #a78bfa;
+  --red:     #f87171;
   --orange:  #f59e42;
+  --blue:    #60a5fa;
+  --yellow:  #f5c842;
 
   /* Shadows */
-  --shadow-card: 0 2px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
-  --shadow-elevated: 0 8px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
-  --glow-accent: 0 0 24px rgba(91,138,245,0.10);
-
-  /* Radius */
-  --radius-sm:  8px;
-  --radius-md:  12px;
-  --radius-lg:  16px;
-  --radius-xl:  20px;
-  --radius-2xl: 24px;
+  --shadow-card:     0 1px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  --shadow-elevated: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  --glow-accent:     0 0 28px rgba(124,90,252,0.15);
 }
 
 /* ─── Base ────────────────────────────────────────────────────── */
@@ -55,55 +48,53 @@ body {
   background: var(--bg);
   min-height: 100vh;
   overflow-x: hidden;
-  font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
 }
 
-/* Very subtle top ambient light */
+/* Ambient top light — ultra-subtle purple */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(91,138,245,0.05), transparent);
+  background: radial-gradient(ellipse 60% 30% at 60% -5%, rgba(124,90,252,0.04), transparent);
   z-index: 0;
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-thumb { background: rgba(150,160,220,0.12); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 99px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* ─── Form controls ───────────────────────────────────────────── */
+/* ─── Form globals ────────────────────────────────────────────── */
 select, textarea {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   color: var(--text-1);
   outline: none;
-  transition: border-color .15s ease;
   font-family: inherit;
+  transition: border-color .15s;
 }
-select:focus, textarea:focus {
-  border-color: var(--border-strong);
-}
+select:focus, textarea:focus { border-color: var(--border-strong); }
 select option { background: var(--surface-2); color: var(--text-1); }
 
 input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 30px var(--surface) inset !important;
+  -webkit-box-shadow: 0 0 0 40px var(--surface) inset !important;
   -webkit-text-fill-color: var(--text-1) !important;
 }
 
-/* ─── Numeric figures (tabular) ───────────────────────────────── */
+/* ─── Tabular numbers ─────────────────────────────────────────── */
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* ─── Utility: action buttons in transaction cards ────────────── */
+/* ─── Action buttons (transaction card) ──────────────────────── */
 .action-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-2);
@@ -111,13 +102,8 @@ input:-webkit-autofill {
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all .15s ease;
+  transition: all .15s;
 }
-.action-btn:hover {
-  background: var(--hover);
-  color: var(--text-1);
-  border-color: var(--border-md);
-}
+.action-btn:hover { background: var(--hover); color: var(--text-1); border-color: var(--border-md); }
 
-/* ─── Safe area (mobile) ──────────────────────────────────────── */
 .pb-safe { padding-bottom: max(12px, env(safe-area-inset-bottom)); }

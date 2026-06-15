@@ -14,15 +14,15 @@ export function EmptyState({ icon: Icon, title = 'Nada aqui ainda', description,
     <div className={cn('flex flex-col items-center justify-center text-center py-16 px-6', className)}>
       {Icon && (
         <div
-          className="w-12 h-12 rounded-[14px] flex items-center justify-center mb-4"
+          className="w-11 h-11 rounded-[14px] flex items-center justify-center mb-4"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <Icon size={20} style={{ color: 'var(--text-3)' }} />
+          <Icon size={18} style={{ color: 'var(--text-3)' }} />
         </div>
       )}
-      <h3 className="text-[13px] font-medium mb-1" style={{ color: 'var(--text-2)' }}>{title}</h3>
+      <h3 className="text-[12px] font-medium mb-1.5" style={{ color: 'var(--text-2)' }}>{title}</h3>
       {description && (
-        <p className="text-[12px] max-w-[220px] leading-relaxed" style={{ color: 'var(--text-3)' }}>{description}</p>
+        <p className="text-[11px] max-w-[200px] leading-relaxed" style={{ color: 'var(--text-3)' }}>{description}</p>
       )}
       {action && <div className="mt-5">{action}</div>}
     </div>

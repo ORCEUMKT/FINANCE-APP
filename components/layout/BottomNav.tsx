@@ -14,14 +14,10 @@ const NAV = [
 
 export function BottomNav() {
   const pathname = usePathname()
-
   return (
     <nav
       className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center px-2 pb-safe"
-      style={{
-        background: 'var(--sidebar)',
-        borderTop: '1px solid var(--border)',
-      }}
+      style={{ background: 'var(--sidebar)', borderTop: '1px solid var(--border)' }}
     >
       {NAV.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
@@ -29,11 +25,11 @@ export function BottomNav() {
           <Link
             key={href}
             href={href}
-            className={cn('flex-1 flex flex-col items-center gap-1 py-3 transition-colors duration-150')}
+            className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors duration-150"
             style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
           >
             <Icon size={18} />
-            <span className="text-[9px] font-medium uppercase tracking-wide">{label}</span>
+            <span className="text-[8px] font-semibold uppercase tracking-wider">{label}</span>
           </Link>
         )
       })}

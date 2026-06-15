@@ -31,101 +31,96 @@ export function Sidebar({ user }: { user: User | null }) {
 
   return (
     <aside
-      className="hidden lg:flex flex-col sticky top-0 h-screen w-56 shrink-0 relative z-10"
-      style={{
-        background: 'var(--sidebar)',
-        borderRight: '1px solid var(--border)',
-      }}
+      className="hidden lg:flex flex-col sticky top-0 h-screen w-14 shrink-0 items-center relative z-10"
+      style={{ background: 'var(--sidebar)', borderRight: '1px solid var(--border)' }}
     >
-      {/* Brand */}
+      {/* Brand icon */}
       <div
-        className="flex items-center gap-3 px-5 h-16"
+        className="w-full flex items-center justify-center h-14 flex-shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div
-          className="w-7 h-7 rounded-[10px] flex items-center justify-center flex-shrink-0"
+          className="w-8 h-8 rounded-[10px] flex items-center justify-center"
           style={{ background: 'var(--accent)', boxShadow: 'var(--glow-accent)' }}
         >
-          <TrendingUp size={14} className="text-white" />
+          <TrendingUp size={15} className="text-white" />
         </div>
-        <span
-          className="text-[13px] font-semibold tracking-[0.04em]"
-          style={{ color: 'var(--text-1)' }}
-        >
-          Finance
-        </span>
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-col gap-0.5 flex-1 px-3 py-5">
+      {/* Nav icons */}
+      <nav className="flex flex-col items-center gap-1 flex-1 w-full py-4 px-2">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
+              title={label}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13px] font-medium transition-all duration-150 group',
+                'relative w-10 h-10 rounded-[12px] flex items-center justify-center transition-all duration-150 group'
               )}
               style={{
                 background: active ? 'var(--accent-dim)' : 'transparent',
-                color: active ? 'var(--text-1)' : 'var(--text-2)',
+                color: active ? 'var(--accent)' : 'var(--text-3)',
               }}
               onMouseEnter={e => {
-                if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--hover)'
+                if (!active) {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--hover)'
+                  ;(e.currentTarget as HTMLElement).style.color = 'var(--text-2)'
+                }
               }}
               onMouseLeave={e => {
-                if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
+                if (!active) {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  ;(e.currentTarget as HTMLElement).style.color = 'var(--text-3)'
+                }
               }}
             >
-              <Icon
-                size={15}
-                style={{ color: active ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}
-              />
-              {label}
+              {active && (
+                <span
+                  className="absolute -left-2 w-[3px] h-5 rounded-r-full"
+                  style={{ background: 'var(--accent)' }}
+                />
+              )}
+              <Icon size={17} />
             </Link>
           )
         })}
       </nav>
 
-      {/* User */}
+      {/* User avatar + logout */}
       <div
-        className="px-3 py-4 flex flex-col gap-0.5"
+        className="flex flex-col items-center gap-2 w-full px-2 py-4 flex-shrink-0"
         style={{ borderTop: '1px solid var(--border)' }}
       >
-        <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-            style={{
-              background: 'var(--accent-dim)',
-              border: '1px solid rgba(91,138,245,0.2)',
-              color: 'var(--accent)',
-            }}
-          >
-            {getInitials(name)}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[12px] font-medium truncate" style={{ color: 'var(--text-1)' }}>{name}</p>
-            <p className="text-[10px] truncate" style={{ color: 'var(--text-3)' }}>{user?.email}</p>
-          </div>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+          style={{
+            background: 'var(--accent-dim)',
+            border: '1px solid rgba(124,90,252,0.2)',
+            color: 'var(--accent)',
+          }}
+          title={name}
+        >
+          {getInitials(name)}
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13px] font-medium transition-all duration-150"
-          style={{ color: 'var(--text-2)' }}
+          title="Sair"
+          className="w-10 h-10 rounded-[12px] flex items-center justify-center transition-all duration-150"
+          style={{ color: 'var(--text-3)' }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.background = 'rgba(244,115,115,0.06)'
-            el.style.color = '#f47373'
+            el.style.background = 'rgba(248,113,113,0.07)'
+            el.style.color = '#f87171'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
             el.style.background = 'transparent'
-            el.style.color = 'var(--text-2)'
+            el.style.color = 'var(--text-3)'
           }}
         >
-          <LogOut size={15} style={{ flexShrink: 0 }} />
-          Sair
+          <LogOut size={15} />
         </button>
       </div>
     </aside>

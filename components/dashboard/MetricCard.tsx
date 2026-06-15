@@ -14,31 +14,33 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, icon: Icon, color = 'var(--accent)', trend, className }: MetricCardProps) {
   return (
-    <Card className={cn('p-5', className)}>
-      <div className="flex items-center gap-2.5 mb-5">
-        {Icon && (
-          <span
-            className="w-7 h-7 rounded-[10px] flex items-center justify-center flex-shrink-0"
-            style={{ background: `${color}18`, color }}
-          >
-            <Icon size={14} />
-          </span>
-        )}
+    <Card
+      className={cn('p-5 flex flex-col gap-0 overflow-hidden', className)}
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        boxShadow: `var(--shadow-card), inset 0 1px 0 ${color}22`,
+      }}
+    >
+      <div className="flex items-center justify-between mb-4">
         <span
-          className="text-[11px] font-medium uppercase tracking-[1.2px]"
+          className="text-[9px] font-semibold uppercase tracking-[2px]"
           style={{ color: 'var(--text-3)' }}
         >
           {label}
         </span>
+        {Icon && <Icon size={13} style={{ color: `${color}88`, flexShrink: 0 }} />}
       </div>
+
       <div
-        className="text-[26px] font-semibold leading-none tabular"
-        style={{ color: 'var(--text-1)', letterSpacing: '-0.02em' }}
+        className="text-[38px] font-bold leading-none tabular"
+        style={{ color, letterSpacing: '-0.03em' }}
       >
         {formatCurrency(value)}
       </div>
+
       {trend && (
-        <p className="text-[11px] mt-2.5" style={{ color: 'var(--text-3)' }}>{trend}</p>
+        <p className="text-[10px] mt-2.5" style={{ color: 'var(--text-3)' }}>{trend}</p>
       )}
     </Card>
   )
