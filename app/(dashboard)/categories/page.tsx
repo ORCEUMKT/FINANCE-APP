@@ -210,90 +210,51 @@ function CategoryCard({
   onEdit: () => void
   onDelete: () => void
 }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="relative rounded-[18px] p-4 flex flex-col gap-3 select-none"
+      className="relative rounded-[16px] p-4 flex flex-col gap-3"
       style={{
-        background: hovered ? `color-mix(in srgb, ${cat.color} 6%, rgba(18,18,28,0.7))` : 'rgba(18,18,28,0.55)',
-        border: `1px solid ${hovered ? cat.color + '50' : 'rgba(255,255,255,0.09)'}`,
+        background: 'rgba(18,18,28,0.55)',
+        border: '1px solid rgba(255,255,255,0.09)',
         backdropFilter: 'blur(20px) saturate(160%)',
         WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        boxShadow: hovered
-          ? `inset 0 1px 0 rgba(255,255,255,0.09), 0 8px 32px rgba(0,0,0,0.4), 0 0 24px ${cat.color}20`
-          : 'inset 0 1px 0 rgba(255,255,255,0.07), 0 4px 16px rgba(0,0,0,0.3)',
-        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 4px 16px rgba(0,0,0,0.3)',
       }}
     >
-      {/* Top row: initial + actions */}
-      <div className="flex items-start justify-between">
-        <div
-          className="w-11 h-11 rounded-[14px] flex items-center justify-center text-lg font-bold flex-shrink-0"
-          style={{
-            background: `${cat.color}18`,
-            color: cat.color,
-            boxShadow: hovered ? `0 0 16px ${cat.color}30` : 'none',
-            transition: 'box-shadow 0.2s',
-          }}
-        >
-          {cat.name.charAt(0).toUpperCase()}
-        </div>
-
-        {/* Action buttons */}
-        <div
-          className="flex gap-1.5"
-          style={{
-            opacity: hovered ? 1 : 0,
-            transform: hovered ? 'translateY(0)' : 'translateY(-4px)',
-            transition: 'opacity 0.18s, transform 0.18s',
-          }}
-        >
-          <button
-            onClick={onEdit}
-            className="w-7 h-7 rounded-[8px] flex items-center justify-center transition-colors"
-            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
-            title="Editar"
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)' }}
-          >
-            <Edit2 size={11} />
-          </button>
-          <button
-            onClick={onDelete}
-            disabled={isDeleting}
-            className="w-7 h-7 rounded-[8px] flex items-center justify-center transition-colors"
-            style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171' }}
-            title="Excluir"
-          >
-            <Trash2 size={11} />
-          </button>
+      {/* Color dot + name + type */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <span
+          className="w-3 h-3 rounded-full flex-shrink-0"
+          style={{ background: cat.color, boxShadow: `0 0 8px ${cat.color}55` }}
+        />
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-1)' }}>
+            {cat.name}
+          </div>
+          <span className="text-[10px] font-medium" style={{ color: TYPE_COLOR[cat.type] }}>
+            {TYPE_LABEL[cat.type]}
+          </span>
         </div>
       </div>
 
-      {/* Name + type */}
-      <div className="flex-1">
-        <div className="text-[13px] font-semibold leading-snug" style={{ color: 'var(--text-1)' }}>
-          {cat.name}
-        </div>
-        <span className="text-[10px] font-medium mt-0.5 block" style={{ color: TYPE_COLOR[cat.type] }}>
-          {TYPE_LABEL[cat.type]}
-        </span>
+      {/* Action buttons — sempre visíveis */}
+      <div className="flex gap-1.5">
+        <button
+          onClick={onEdit}
+          className="flex-1 h-7 rounded-[8px] flex items-center justify-center gap-1.5 text-[10px] font-medium transition-opacity hover:opacity-70"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+        >
+          <Edit2 size={10} /> Editar
+        </button>
+        <button
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="flex-1 h-7 rounded-[8px] flex items-center justify-center gap-1.5 text-[10px] font-medium transition-opacity hover:opacity-70 disabled:opacity-30"
+          style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.15)', color: '#f87171' }}
+        >
+          <Trash2 size={10} /> Excluir
+        </button>
       </div>
-
-      {/* Bottom accent line */}
-      <div
-        className="absolute bottom-0 left-4 right-4 rounded-full"
-        style={{
-          height: '2px',
-          background: cat.color,
-          opacity: hovered ? 0.55 : 0.18,
-          transition: 'opacity 0.2s',
-        }}
-      />
     </div>
   )
 }
