@@ -43,7 +43,7 @@ export default function TransactionsPage() {
     setDateTo(t)
   }
   const [showFilters, setShowFilters] = useState(false)
-  const [formOpen, setFormOpen]         = useState(false)
+  const [formOpen, setFormOpen]         = useState(() => params.get('new') === '1')
   const [editing, setEditing]           = useState<Transaction | null>(null)
   const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
   const [deletedBuffer, setDeletedBuffer] = useState<Transaction | null>(null)

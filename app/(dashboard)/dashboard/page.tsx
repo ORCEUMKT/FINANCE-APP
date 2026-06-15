@@ -74,7 +74,7 @@ export default function DashboardPage() {
         {/* Month selector + actions */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px] whitespace-nowrap">
+            <Button onClick={() => router.push('/transactions?new=1')} size="sm" className="gap-1.5 px-4 text-[13px] whitespace-nowrap">
               <Plus size={13} /> Novo Lançamento
             </Button>
             <VoiceMicButton
@@ -204,7 +204,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
-            <Button onClick={() => router.push('/transactions')} size="sm">
+            <Button onClick={() => router.push('/transactions?new=1')} size="sm">
               <Plus size={13} /> Lançamento
             </Button>
           </div>
