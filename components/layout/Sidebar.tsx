@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ArrowLeftRight, Tag, Settings } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, Tag, Settings, type LucideIcon } from 'lucide-react'
 
 const NAV = [
   { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
@@ -13,7 +13,7 @@ const NAV = [
 ]
 
 export function Sidebar({ user: _ }: { user: unknown }) {
-  const pathname  = usePathname()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
   return (
@@ -32,59 +32,99 @@ export function Sidebar({ user: _ }: { user: unknown }) {
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
-            <Link
+            <NavItem
               key={href}
               href={href}
-              title={!open ? label : undefined}
-              className="relative flex items-center gap-3 h-10 rounded-[12px] transition-all duration-150 px-2.5 whitespace-nowrap overflow-hidden"
-              style={{
-                background: active ? 'var(--accent-dim)' : 'transparent',
-                color: active ? 'var(--accent)' : 'var(--text-3)',
-                minWidth: 0,
-              }}
-              onMouseEnter={e => {
-                if (!active) {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'var(--hover)'
-                  el.style.color = 'var(--text-2)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!active) {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.background = 'transparent'
-                  el.style.color = 'var(--text-3)'
-                }
-              }}
-            >
-              {/* Active bar */}
-              {active && (
-                <span
-                  className="absolute -left-2 w-[3px] h-5 rounded-r-full flex-shrink-0"
-                  style={{ background: 'var(--accent)' }}
-                />
-              )}
-
-              {/* Icon — always visible, centered when collapsed */}
-              <span className="flex items-center justify-center w-5 h-5 flex-shrink-0">
-                <Icon size={17} />
-              </span>
-
-              {/* Label — slides in */}
-              <span
-                className="text-[12px] font-medium flex-shrink-0"
-                style={{
-                  opacity: open ? 1 : 0,
-                  transform: open ? 'translateX(0)' : 'translateX(-6px)',
-                  transition: 'opacity 0.18s, transform 0.18s',
-                }}
-              >
-                {label}
-              </span>
-            </Link>
+              label={label}
+              icon={Icon}
+              active={active}
+              open={open}
+            />
           )
         })}
       </nav>
     </aside>
+  )
+}
+
+function NavItem({
+  href, label, icon: Icon, active, open,
+}: {
+  href: string
+  label: string
+  icon: LucideIcon
+  active: boolean
+  open: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const bg = active
+    ? 'rgba(124,90,252,0.12)'
+    : hovered
+    ? 'rgba(255,255,255,0.06)'
+    : 'transparent'
+
+  const border = active
+    ? '1px solid rgba(124,90,252,0.2)'
+    : hovered
+    ? '1px solid rgba(255,255,255,0.08)'
+    : '1px solid transparent'
+
+  const color = active
+    ? 'var(--accent)'
+    : hovered
+    ? 'var(--text-1)'
+    : 'var(--text-3)'
+
+  const leftBarOpacity = active ? 1 : hovered ? 0.45 : 0
+
+  return (
+    <Link
+      href={href}
+      title={!open ? label : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="relative flex items-center gap-3 h-10 rounded-[12px] px-2.5 whitespace-nowrap overflow-hidden"
+      style={{
+        background: bg,
+        border,
+        color,
+        transform: hovered && !active ? 'translateX(1px)' : 'translateX(0)',
+        boxShadow: active
+          ? '0 0 16px rgba(124,90,252,0.08)'
+          : hovered
+          ? '0 0 12px rgba(255,255,255,0.03)'
+          : 'none',
+        transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
+        minWidth: 0,
+      }}
+    >
+      {/* Left accent bar */}
+      <span
+        className="absolute -left-2 w-[3px] h-5 rounded-r-full flex-shrink-0"
+        style={{
+          background: 'var(--accent)',
+          opacity: leftBarOpacity,
+          transition: 'opacity 0.15s',
+        }}
+      />
+
+      {/* Icon */}
+      <span className="flex items-center justify-center w-5 h-5 flex-shrink-0">
+        <Icon size={17} />
+      </span>
+
+      {/* Label */}
+      <span
+        className="text-[12px] font-medium flex-shrink-0"
+        style={{
+          opacity: open ? 1 : 0,
+          transform: open ? 'translateX(0)' : 'translateX(-6px)',
+          transition: 'opacity 0.18s, transform 0.18s',
+        }}
+      >
+        {label}
+      </span>
+    </Link>
   )
 }
