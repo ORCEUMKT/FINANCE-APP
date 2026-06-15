@@ -1,22 +1,14 @@
-import { TrendingUp } from 'lucide-react'
-
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: 'var(--bg)' }}>
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-3 justify-center mb-10">
-          <div
-            className="w-9 h-9 rounded-[12px] flex items-center justify-center"
-            style={{ background: 'var(--accent)', boxShadow: 'var(--glow-accent)' }}
-          >
-            <TrendingUp size={17} className="text-white" />
-          </div>
-          <span
-            className="text-[13px] font-semibold tracking-[0.1em] uppercase"
-            style={{ color: 'var(--text-1)' }}
-          >
-            Finance
-          </span>
+        <div className="flex justify-center mb-10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo/logo.png?v=2"
+            alt="Finance"
+            style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
+          />
         </div>
         {children}
       </div>
