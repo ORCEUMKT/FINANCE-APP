@@ -117,7 +117,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
   const segBtnStyle = (active: boolean): React.CSSProperties => ({
     flex: 1,
-    padding: '10px 0',
+    padding: '8px 0',
     borderRadius: '12px',
     fontSize: '11px',
     fontWeight: 600,
@@ -137,7 +137,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Editar Lançamento' : 'Novo Lançamento'}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
         {/* Voice detection banner */}
         {!isEdit && prefill?.rawText && (
           <div
@@ -161,24 +161,28 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           maxLength={120}
         />
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Valor (R$)"
-            type="number"
-            step="0.01"
-            min="0.01"
-            placeholder="0,00"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            error={fieldError('value')}
-          />
-          <Input
-            label="Data"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            error={fieldError('date')}
-          />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="min-w-0">
+            <Input
+              label="Valor (R$)"
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder="0,00"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              error={fieldError('value')}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <Input
+              label="Data"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              error={fieldError('date')}
+            />
+          </div>
         </div>
 
         {/* Parcelas — somente para novos lançamentos */}
@@ -192,7 +196,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
                 max={60}
                 value={installments}
                 onChange={(e) => setInstallments(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))}
-                className="w-20 rounded-[12px] px-3 py-2.5 text-sm text-center tabular"
+                className="w-20 rounded-[12px] px-3 py-2 text-sm text-center tabular"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid var(--border)',
@@ -216,7 +220,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full rounded-[14px] px-4 py-3 text-sm outline-none"
+            className="w-full rounded-[12px] px-4 py-2 text-sm outline-none"
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid var(--border)',
@@ -267,7 +271,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           <p className="text-xs -mt-1" style={{ color: 'var(--red)' }}>{fieldError('form')}</p>
         )}
 
-        <div className="flex gap-3 pt-1">
+        <div className="flex gap-3 pt-0.5">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
           <Button type="submit" loading={loading} className="flex-[2]">
             {isEdit

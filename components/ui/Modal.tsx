@@ -36,7 +36,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         }}
       >
         {title && (
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-[14px] font-semibold" style={{ color: 'var(--text-1)' }}>{title}</h2>
             <button
               onClick={onClose}

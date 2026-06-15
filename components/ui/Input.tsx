@@ -18,7 +18,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={id}
-          className={cn('w-full rounded-[12px] px-4 py-2.5 text-[13px] outline-none transition-all duration-150', className)}
+          className={cn('w-full rounded-[12px] px-4 py-2 text-[13px] outline-none transition-all duration-150', className)}
           style={{
             background: 'var(--surface)',
             border: `1px solid ${error ? 'rgba(248,113,113,0.25)' : 'var(--border)'}`,
