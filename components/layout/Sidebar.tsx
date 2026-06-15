@@ -154,14 +154,16 @@ function NavItem({
         <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
       </span>
 
-      {/* Label */}
+      {/* Label — colapsado para 0 quando fechado para não empurrar o ícone */}
       <span
         className="text-[13px] font-medium"
         style={{
-          marginLeft: '10px',
+          marginLeft: open ? '10px' : '0',
+          maxWidth: open ? '140px' : '0',
+          overflow: 'hidden',
           opacity: open ? 1 : 0,
-          transform: open ? 'translateX(0)' : 'translateX(-8px)',
-          transition: 'opacity 0.2s, transform 0.2s',
+          whiteSpace: 'nowrap',
+          transition: 'max-width 0.22s, opacity 0.18s, margin-left 0.18s',
           pointerEvents: 'none',
         }}
       >
