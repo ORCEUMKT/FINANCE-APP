@@ -28,9 +28,9 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
     >
       <div
         className={cn(
-          'w-full sm:max-w-lg bg-gradient-to-br from-[#1c1d21] to-[#0a0b0c]',
-          'border border-white/[.14] rounded-t-3xl sm:rounded-2xl',
-          'max-h-[92vh] overflow-y-auto shadow-[0_36px_90px_rgba(0,0,0,.6)]',
+          'w-full sm:max-w-lg bg-[#13161a]',
+          'border border-[#1e2226] rounded-t-2xl sm:rounded-xl',
+          'max-h-[92vh] overflow-y-auto shadow-[0_24px_60px_rgba(0,0,0,.5)]',
           'p-6',
           className
         )}
@@ -40,7 +40,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             <h2 className="text-base font-bold text-white">{title}</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-xl border border-white/10 bg-white/[.04] text-white/50 hover:text-white hover:bg-white/[.08] transition-all flex items-center justify-center"
+              className="w-8 h-8 rounded-lg border border-[#1e2226] bg-[#1a1d22] text-[#6b7280] hover:text-white hover:bg-[#22262c] transition-all flex items-center justify-center"
             >
               <X size={14} />
             </button>

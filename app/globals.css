@@ -5,43 +5,42 @@
 html { scroll-behavior: smooth; }
 
 body {
-  color: rgba(246,246,247,.92);
+  color: #e8eaed;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at 22% -4%, rgba(255,255,255,.07), transparent 26%),
-    radial-gradient(circle at 78% 4%, rgba(123,77,255,.05), transparent 24%),
-    linear-gradient(180deg, #161719 0%, #090A0B 42%, #050506 100%);
+  background: #0c0e10;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-body::before {
-  content: "";
-  position: fixed; inset: 0;
-  pointer-events: none; opacity: .13;
-  background-image: radial-gradient(circle, rgba(255,255,255,.4) 1px, transparent 1.5px);
-  background-size: 160px 160px;
-  mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
-  z-index: 0;
-}
-
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: #1e2226; border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
 
 .action-btn {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 10px; border-radius: 9px;
-  border: 1px solid rgba(255,255,255,.1);
-  background: rgba(255,255,255,.04); color: rgba(255,255,255,.6);
-  font-size: 11px; font-weight: 700; cursor: pointer; transition: all .18s ease;
+  padding: 6px 10px; border-radius: 8px;
+  border: 1px solid #1e2226;
+  background: #13161a; color: #6b7280;
+  font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s ease;
 }
-.action-btn:hover { background: rgba(255,255,255,.09); color: #fff; border-color: rgba(255,255,255,.18); }
+.action-btn:hover { background: #1a1d22; color: #e8eaed; }
+
+/* Form controls used in TransactionForm selects/textareas */
+select, textarea {
+  background: #13161a;
+  border: 1px solid #1e2226;
+  border-radius: 8px;
+  color: #e8eaed;
+  outline: none;
+  transition: border-color .15s ease;
+}
+select:focus, textarea:focus { border-color: rgba(0,212,160,.4); }
 
 .pb-safe { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
-select option { background: #1c1d21; color: #fff; }
+select option { background: #13161a; color: #e8eaed; }
 
 input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 30px rgba(28,29,33,.95) inset !important;
-  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0 30px #13161a inset !important;
+  -webkit-text-fill-color: #e8eaed !important;
 }

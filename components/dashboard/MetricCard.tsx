@@ -12,24 +12,24 @@ interface MetricCardProps {
   className?: string
 }
 
-export function MetricCard({ label, value, icon: Icon, color = '#fff', trend, className }: MetricCardProps) {
+export function MetricCard({ label, value, icon: Icon, color = '#00d4a0', trend, className }: MetricCardProps) {
   return (
     <Card className={cn('p-5', className)}>
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="text-[10px] font-700 uppercase tracking-[2px] text-white/40">{label}</span>
+      <div className="flex items-center gap-2.5 mb-3">
         {Icon && (
           <span
-            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ background: `${color}18`, color }}
           >
-            <Icon size={15} />
+            <Icon size={14} />
           </span>
         )}
+        <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</span>
       </div>
-      <div className="text-[22px] font-800 tracking-tight text-white leading-none">
+      <div className="text-[24px] font-bold tracking-tight text-white leading-none">
         {formatCurrency(value)}
       </div>
-      {trend && <p className="text-[11px] text-white/35 mt-1.5">{trend}</p>}
+      {trend && <p className="text-[11px] text-[#6b7280] mt-2">{trend}</p>}
     </Card>
   )
 }
