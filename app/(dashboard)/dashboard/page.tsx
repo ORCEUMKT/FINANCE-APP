@@ -63,10 +63,10 @@ export default function DashboardPage() {
       ═══════════════════════════════════════ */}
       <div className="lg:hidden flex flex-col gap-5 pb-4">
 
-        {/* Action buttons — compact, right-aligned */}
-        <div className="flex items-center justify-end gap-2">
-          <Button onClick={() => openForm()} size="sm" className="gap-1.5">
-            <Plus size={13} /> Novo
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          <Button onClick={() => openForm()} className="flex-1 justify-center gap-2 text-[14px]">
+            <Plus size={15} /> Novo Lançamento
           </Button>
           <VoiceMicButton
             onResult={(transcript) => {
@@ -80,9 +80,14 @@ export default function DashboardPage() {
 
         {/* Saldo Líquido — solto, sem Card (estilo banco) */}
         <div className="px-1 py-2">
-          <p className="text-[9px] font-semibold uppercase tracking-[2.5px] mb-2" style={{ color: 'var(--text-3)' }}>
-            Saldo Líquido
-          </p>
+          <div
+            className="inline-flex items-center px-3 py-1 rounded-full mb-3"
+            style={{ border: '1px solid var(--border-md)' }}
+          >
+            <p className="text-[9px] font-semibold uppercase tracking-[2.5px]" style={{ color: 'var(--text-3)' }}>
+              Saldo Líquido
+            </p>
+          </div>
           <div
             className="text-[40px] font-bold leading-none tabular"
             style={{ color: balanceColor, letterSpacing: '-0.03em' }}
