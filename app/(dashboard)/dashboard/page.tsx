@@ -61,23 +61,12 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════
           MOBILE LAYOUT (lg:hidden)
       ═══════════════════════════════════════ */}
-      <div className="lg:hidden flex flex-col gap-4 pb-4">
+      <div className="lg:hidden flex flex-col gap-5 pb-4">
 
-        {/* Logo pill */}
-        <div className="flex justify-center pt-3">
-          <div
-            className="flex items-center gap-3 px-8 py-3.5 rounded-full"
-            style={{ border: '1px solid var(--border-md)', background: 'rgba(255,255,255,0.02)' }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/logo.png?v=2" alt="Finance" style={{ height: '22px', width: 'auto' }} />
-          </div>
-        </div>
-
-        {/* Quick action buttons */}
-        <div className="flex gap-3">
-          <Button onClick={() => openForm()} className="flex-1 justify-center gap-2 text-[14px]">
-            <Plus size={15} /> Novo Lançamento
+        {/* Action buttons — compact, right-aligned */}
+        <div className="flex items-center justify-end gap-2">
+          <Button onClick={() => openForm()} size="sm" className="gap-1.5">
+            <Plus size={13} /> Novo
           </Button>
           <VoiceMicButton
             onResult={(transcript) => {
@@ -89,9 +78,9 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Hero card: Saldo Líquido */}
-        <Card className="p-5">
-          <p className="text-[9px] font-semibold uppercase tracking-[2.5px] mb-4" style={{ color: 'var(--text-3)' }}>
+        {/* Saldo Líquido — solto, sem Card (estilo banco) */}
+        <div className="px-1 py-2">
+          <p className="text-[9px] font-semibold uppercase tracking-[2.5px] mb-2" style={{ color: 'var(--text-3)' }}>
             Saldo Líquido
           </p>
           <div
@@ -100,67 +89,90 @@ export default function DashboardPage() {
           >
             {formatCurrency(metrics.liquidTotal)}
           </div>
-          <p className="text-[13px] font-semibold mt-2.5" style={{ color: balanceColor }}>
+          <p className="text-[13px] font-semibold mt-2" style={{ color: balanceColor }}>
             {metrics.liquidTotal >= 0 ? 'Positivo' : 'Negativo'}
           </p>
-        </Card>
+        </div>
 
-        {/* Secondary: Despesas + Receitas */}
+        {/* Despesas + Receitas em cards */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-4">
-            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-3)' }}>
-              Despesas
-            </p>
+            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-3)' }}>Despesas</p>
             <div className="text-[20px] font-bold tabular truncate" style={{ color: 'var(--red)', letterSpacing: '-0.02em' }}>
               {formatCurrency(metrics.totalExpenses)}
             </div>
-            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-3)' }}>
-              {metrics.expenseCount} Lançamentos
-            </p>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-3)' }}>{metrics.expenseCount} lançamentos</p>
           </Card>
           <Card className="p-4">
-            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-3)' }}>
-              Receitas
-            </p>
+            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-3)' }}>Receitas</p>
             <div className="text-[20px] font-bold tabular truncate" style={{ color: 'var(--green)', letterSpacing: '-0.02em' }}>
               {formatCurrency(metrics.totalIncome)}
             </div>
-            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-3)' }}>
-              {metrics.incomeCount} Receitas
-            </p>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-3)' }}>{metrics.incomeCount} receitas</p>
           </Card>
         </div>
 
-        {/* Composição — horizontal (donut left, legend right) */}
-        {chartTotal > 0 && (
-          <Card className="p-5">
-            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-4" style={{ color: 'var(--text-3)' }}>
-              Composição
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="w-[140px] flex-shrink-0">
-                <DonutChart
-                  data={metrics.categoryRanking}
-                  total={chartTotal}
-                  hideLegend
+        {/* Composição — tamanho normal, clicável */}
+        <Card className="p-5">
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
+            Composição
+          </p>
+          <DonutChart
+            data={metrics.categoryRanking}
+            total={chartTotal}
+            onCategoryClick={(catId) => { if (catId) router.push(`/transactions?category=${catId}`) }}
+          />
+        </Card>
+
+        {/* Gastos por dia */}
+        <Card className="p-5">
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
+            Gastos por dia
+          </p>
+          <BarChart
+            data={metrics.dailyTotals}
+            onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)}
+          />
+          <div className="mt-6 flex flex-col gap-2.5">
+            {metrics.categoryRanking.slice(0, 5).map((item, i) => (
+              <button
+                key={item.category_name}
+                onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)}
+                className="flex items-center gap-3 text-left transition-opacity hover:opacity-70"
+              >
+                <span className="text-[10px] w-4 flex-shrink-0 tabular font-semibold" style={{ color: 'var(--text-3)' }}>{i + 1}</span>
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.category_color }} />
+                <span className="flex-1 text-[12px] truncate" style={{ color: 'var(--text-2)' }}>{item.category_name}</span>
+                <span className="text-[12px] font-semibold flex-shrink-0 tabular" style={{ color: 'var(--text-1)' }}>{formatCurrency(item.total)}</span>
+                <span className="text-[10px] flex-shrink-0 w-9 text-right tabular" style={{ color: 'var(--text-3)' }}>{item.percentage.toFixed(1)}%</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Maiores lançamentos */}
+        <div>
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-4" style={{ color: 'var(--text-3)' }}>
+            Maiores lançamentos
+          </p>
+          {metrics.topTransactions.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {metrics.topTransactions.map((tx, i) => (
+                <TransactionCard
+                  key={tx.id}
+                  transaction={tx}
+                  rank={i}
+                  onEdit={(t) => router.push(`/transactions?edit=${t.id}`)}
+                  onDelete={() => {}}
+                  onDuplicate={() => {}}
+                  onMarkRecovered={() => {}}
                 />
-              </div>
-              <div className="flex flex-col gap-2.5 flex-1 min-w-0">
-                {metrics.categoryRanking.slice(0, 5).map((item) => (
-                  <div key={item.category_name} className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: item.category_color }}
-                    />
-                    <span className="text-[12px] truncate" style={{ color: 'var(--text-2)' }}>
-                      {item.category_name.split('/')[0].trim()}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-          </Card>
-        )}
+          ) : (
+            <EmptyState icon={Activity} title="Sem lançamentos" description="Adicione seu primeiro lançamento no Extrato" />
+          )}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════
