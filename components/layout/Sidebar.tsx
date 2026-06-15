@@ -30,13 +30,13 @@ export function Sidebar({ user }: { user: User | null }) {
   const name = user?.user_metadata?.name ?? user?.email ?? ''
 
   return (
-    <aside className="hidden lg:flex flex-col sticky top-0 h-screen w-56 shrink-0 bg-[#0f1114] border-r border-[#1e2226]">
+    <aside className="hidden lg:flex flex-col sticky top-0 h-screen w-56 shrink-0 bg-[#141729] border-r border-[#2a2f4a]">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-[#1e2226]">
-        <div className="w-7 h-7 rounded-lg bg-[#00d4a0] flex items-center justify-center flex-shrink-0">
-          <TrendingUp size={14} className="text-[#0c0e10]" />
+      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-[#2a2f4a]">
+        <div className="w-7 h-7 rounded-lg bg-[#5b8af5] flex items-center justify-center flex-shrink-0">
+          <TrendingUp size={14} className="text-white" />
         </div>
-        <span className="text-sm font-bold tracking-widest text-white uppercase">Finance</span>
+        <span className="text-sm font-semibold text-white tracking-wide">Finance</span>
       </div>
 
       {/* Nav */}
@@ -48,13 +48,13 @@ export function Sidebar({ user }: { user: User | null }) {
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-150',
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
                 active
-                  ? 'bg-[#1a1d22] text-white'
-                  : 'text-[#6b7280] hover:text-[#c4c9d0] hover:bg-[#13161a]'
+                  ? 'bg-[#5b8af5]/15 text-white'
+                  : 'text-[#8b92b5] hover:text-[#c5c8e0] hover:bg-[#1e2235]'
               )}
             >
-              <Icon size={16} className={active ? 'text-[#00d4a0]' : ''} />
+              <Icon size={16} className={active ? 'text-[#5b8af5]' : ''} />
               {label}
             </Link>
           )
@@ -62,19 +62,19 @@ export function Sidebar({ user }: { user: User | null }) {
       </nav>
 
       {/* User */}
-      <div className="border-t border-[#1e2226] px-3 py-4 flex flex-col gap-0.5">
+      <div className="border-t border-[#2a2f4a] px-3 py-4 flex flex-col gap-0.5">
         <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
-          <div className="w-7 h-7 rounded-full bg-[#1a1d22] border border-[#2a2f36] flex items-center justify-center text-[10px] font-bold text-[#00d4a0] flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-[#5b8af5]/20 border border-[#5b8af5]/30 flex items-center justify-center text-[10px] font-bold text-[#5b8af5] flex-shrink-0">
             {getInitials(name)}
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-white truncate">{name}</p>
-            <p className="text-[10px] text-[#6b7280] truncate">{user?.email}</p>
+            <p className="text-[10px] text-[#8b92b5] truncate">{user?.email}</p>
           </div>
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold text-[#6b7280] hover:text-red-400 hover:bg-red-500/[.06] transition-all"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#8b92b5] hover:text-red-400 hover:bg-red-500/[.08] transition-all"
         >
           <LogOut size={16} />
           Sair

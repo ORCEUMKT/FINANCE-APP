@@ -16,7 +16,7 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center px-2 pb-safe bg-[#0f1114] border-t border-[#1e2226]">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center px-2 pb-safe bg-[#141729] border-t border-[#2a2f4a]">
       {NAV.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         return (
@@ -25,7 +25,7 @@ export function BottomNav() {
             href={href}
             className={cn(
               'flex-1 flex flex-col items-center gap-1 py-3 transition-colors duration-150',
-              active ? 'text-[#00d4a0]' : 'text-[#6b7280] hover:text-[#c4c9d0]'
+              active ? 'text-[#5b8af5]' : 'text-[#8b92b5] hover:text-[#c5c8e0]'
             )}
           >
             <Icon size={19} />
