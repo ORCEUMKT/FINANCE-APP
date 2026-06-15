@@ -73,7 +73,6 @@ export default function DashboardPage() {
 
         {/* Month selector + actions */}
         <div className="flex items-center justify-between gap-2">
-          <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
           <div className="flex items-center gap-2">
             <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px] whitespace-nowrap">
               <Plus size={13} /> Novo Lançamento
@@ -87,6 +86,7 @@ export default function DashboardPage() {
               onError={(msg) => toast(msg)}
             />
           </div>
+          <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
         </div>
 
         {/* Saldo Líquido — solto, sem Card (estilo banco) */}
