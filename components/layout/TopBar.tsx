@@ -28,7 +28,7 @@ export function TopBar({ user }: { user: User | null }) {
       {/* Logo */}
       <div className="flex items-center h-full py-2">
         <Image
-          src="/logo/Ativo 2.png"
+          src="/logo/Ativo%202.png"
           alt="Logo"
           width={120}
           height={32}
