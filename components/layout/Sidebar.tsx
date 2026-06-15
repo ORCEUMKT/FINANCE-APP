@@ -101,19 +101,19 @@ function NavItem({
   const [hovered, setHovered] = useState(false)
 
   const bg = active
-    ? 'rgba(124,90,252,0.2)'
+    ? 'rgba(124,90,252,0.22)'
     : hovered
-    ? 'rgba(255,255,255,0.07)'
-    : 'transparent'
+    ? 'rgba(255,255,255,0.09)'
+    : 'rgba(255,255,255,0.03)'
 
   const border = active
-    ? '1px solid rgba(124,90,252,0.35)'
+    ? '1px solid rgba(124,90,252,0.4)'
     : hovered
-    ? '1px solid rgba(255,255,255,0.09)'
-    : '1px solid transparent'
+    ? '1px solid rgba(255,255,255,0.12)'
+    : '1px solid rgba(255,255,255,0.05)'
 
   const shadow = active
-    ? '0 0 18px rgba(124,90,252,0.22), inset 0 1px 0 rgba(255,255,255,0.08)'
+    ? '0 0 24px rgba(124,90,252,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
     : 'none'
 
   const color = active ? 'var(--accent)' : hovered ? 'var(--text-1)' : 'var(--text-3)'
