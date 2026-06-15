@@ -33,7 +33,7 @@ export function MetricCard({ label, value, icon: Icon, color = 'var(--accent)', 
       </div>
 
       <div
-        className="text-[22px] sm:text-[30px] lg:text-[38px] font-bold leading-none tabular truncate"
+        className="text-[18px] sm:text-[24px] lg:text-[30px] font-bold leading-none tabular break-all"
         style={{ color, letterSpacing: '-0.03em' }}
       >
         {formatCurrency(value)}

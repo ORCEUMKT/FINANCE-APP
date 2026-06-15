@@ -70,7 +70,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between gap-2">
           <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
           <div className="flex items-center gap-2">
-            <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px]">
+            <Button onClick={() => openForm()} size="sm" className="gap-1.5 px-4 text-[13px] whitespace-nowrap">
               <Plus size={13} /> Novo Lançamento
             </Button>
             <VoiceMicButton
