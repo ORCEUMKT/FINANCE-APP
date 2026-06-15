@@ -107,3 +107,10 @@ input:-webkit-autofill {
 .action-btn:hover { background: var(--hover); color: var(--text-1); border-color: var(--border-md); }
 
 .pb-safe { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+/* Prevent iOS Safari auto-zoom on input focus (triggers when font-size < 16px) */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}

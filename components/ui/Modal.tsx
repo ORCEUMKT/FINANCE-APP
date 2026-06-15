@@ -23,12 +23,12 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pb-[68px] sm:pb-4"
       style={{ background: 'rgba(5,5,10,0.8)', backdropFilter: 'blur(10px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className={cn('w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[20px] max-h-[92vh] overflow-y-auto p-6', className)}
+        className={cn('w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[20px] max-h-[88vh] overflow-y-auto px-5 pt-6 pb-8 sm:p-6', className)}
         style={{
           background: 'var(--surface-2)',
           border: '1px solid var(--border-md)',
