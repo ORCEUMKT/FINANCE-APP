@@ -69,11 +69,8 @@ export function Sidebar({ user: _ }: { user: unknown }) {
         />
       </div>
 
-      {/* Nav */}
-      <nav
-        className="flex flex-col flex-1 py-4"
-        style={{ gap: '4px', padding: open ? '16px 10px' : '16px 0' }}
-      >
+      {/* Nav — items-center centraliza os quadrados quando colapsado */}
+      <nav className="flex flex-col items-center gap-1.5 flex-1 py-4">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
@@ -103,20 +100,20 @@ function NavItem({
 }) {
   const [hovered, setHovered] = useState(false)
 
-  const iconBg = active
-    ? 'rgba(124,90,252,0.22)'
+  const bg = active
+    ? 'rgba(124,90,252,0.2)'
     : hovered
-    ? 'rgba(255,255,255,0.08)'
+    ? 'rgba(255,255,255,0.07)'
     : 'transparent'
 
-  const iconBorder = active
+  const border = active
     ? '1px solid rgba(124,90,252,0.35)'
     : hovered
-    ? '1px solid rgba(255,255,255,0.1)'
+    ? '1px solid rgba(255,255,255,0.09)'
     : '1px solid transparent'
 
-  const iconShadow = active
-    ? '0 0 20px rgba(124,90,252,0.25), inset 0 1px 0 rgba(255,255,255,0.08)'
+  const shadow = active
+    ? '0 0 18px rgba(124,90,252,0.22), inset 0 1px 0 rgba(255,255,255,0.08)'
     : 'none'
 
   const color = active ? 'var(--accent)' : hovered ? 'var(--text-1)' : 'var(--text-3)'
@@ -127,43 +124,35 @@ function NavItem({
       title={!open ? label : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex items-center whitespace-nowrap overflow-hidden w-full"
+      className="flex items-center justify-center whitespace-nowrap overflow-hidden flex-shrink-0"
       style={{
-        height: '44px',
+        /* Colapsado: quadrado 40×40. Expandido: barra larga */
+        width: open ? 'calc(100% - 16px)' : '40px',
+        height: '40px',
+        borderRadius: '12px',
+        background: bg,
+        border,
+        boxShadow: shadow,
+        backdropFilter: active ? 'blur(8px)' : 'none',
+        WebkitBackdropFilter: active ? 'blur(8px)' : 'none',
         color,
+        paddingLeft: open ? '12px' : '0',
         justifyContent: open ? 'flex-start' : 'center',
-        transition: 'color 0.15s',
+        transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1), background 0.15s, border 0.15s, box-shadow 0.15s, color 0.15s, padding 0.22s',
       }}
     >
-      {/* Icon glass square */}
-      <span
-        className="flex items-center justify-center flex-shrink-0"
-        style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '12px',
-          background: iconBg,
-          border: iconBorder,
-          boxShadow: iconShadow,
-          backdropFilter: active ? 'blur(8px)' : 'none',
-          WebkitBackdropFilter: active ? 'blur(8px)' : 'none',
-          transition: 'all 0.18s cubic-bezier(0.4,0,0.2,1)',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
-      </span>
+      <Icon size={18} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
 
-      {/* Label — colapsado para 0 quando fechado para não empurrar o ícone */}
+      {/* Label */}
       <span
         className="text-[13px] font-medium"
         style={{
           marginLeft: open ? '10px' : '0',
-          maxWidth: open ? '140px' : '0',
+          maxWidth: open ? '130px' : '0',
           overflow: 'hidden',
           opacity: open ? 1 : 0,
           whiteSpace: 'nowrap',
-          transition: 'max-width 0.22s, opacity 0.18s, margin-left 0.18s',
+          transition: 'max-width 0.22s, opacity 0.16s, margin-left 0.22s',
           pointerEvents: 'none',
         }}
       >
