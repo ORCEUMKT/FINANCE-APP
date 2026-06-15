@@ -24,26 +24,40 @@ export function VoiceMicButton({ onResult, onError, className }: VoiceMicButtonP
 
     const rec = new SR()
     rec.lang = 'pt-BR'
-    rec.continuous = false
-    rec.interimResults = false
+    rec.continuous = true      // keep listening across natural pauses
+    rec.interimResults = false // only fire on final results
     rec.maxAlternatives = 1
 
-    rec.onstart  = () => setListening(true)
-    rec.onend    = () => setListening(false)
+    const segments: string[] = []
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null
 
-    rec.onerror  = (e: { error: string }) => {
-      setListening(false)
-      if (e.error === 'not-allowed')
-        onError?.('Permissão de microfone negada. Habilite nas configurações do browser.')
-      else if (e.error === 'no-speech')
-        onError?.('Nenhum áudio detectado. Fale mais perto do microfone.')
-      else
-        onError?.(`Erro no microfone: ${e.error}`)
+    rec.onstart = () => setListening(true)
+
+    rec.onresult = (e: { resultIndex: number; results: { length: number; [k: number]: { isFinal: boolean; [k: number]: { transcript: string } } } }) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) segments.push(e.results[i][0].transcript)
+      }
+      // Reset silence timer — waits 2.5s after last speech segment before auto-stopping
+      if (silenceTimer) clearTimeout(silenceTimer)
+      silenceTimer = setTimeout(() => rec.stop(), 2500)
     }
 
-    rec.onresult = (e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
-      const transcript = e.results[0][0].transcript
-      onResult(transcript)
+    rec.onend = () => {
+      if (silenceTimer) clearTimeout(silenceTimer)
+      setListening(false)
+      recRef.current = null
+      const full = segments.join(' ').trim()
+      if (full) onResult(full)
+    }
+
+    rec.onerror = (e: { error: string }) => {
+      if (silenceTimer) clearTimeout(silenceTimer)
+      setListening(false)
+      recRef.current = null
+      if (e.error === 'not-allowed')
+        onError?.('Permissão de microfone negada. Habilite nas configurações do browser.')
+      else if (e.error !== 'no-speech')
+        onError?.(`Erro no microfone: ${e.error}`)
     }
 
     recRef.current = rec
@@ -52,7 +66,6 @@ export function VoiceMicButton({ onResult, onError, className }: VoiceMicButtonP
 
   function stop() {
     recRef.current?.stop()
-    setListening(false)
   }
 
   return (
@@ -68,7 +81,6 @@ export function VoiceMicButton({ onResult, onError, className }: VoiceMicButtonP
         boxShadow: listening ? '0 0 16px rgba(248,113,113,0.15)' : 'none',
       }}
     >
-      {/* Pulse ring when recording */}
       {listening && (
         <span
           className="absolute inset-0 animate-ping rounded-[14px] opacity-30"

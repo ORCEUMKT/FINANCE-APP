@@ -6,8 +6,18 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { validateTransaction, type FieldError } from '@/lib/validations'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
-import type { Category } from '@/types/category'
 import type { VoicePrefill } from '@/lib/voiceParser'
+import type { Category } from '@/types/category'
+
+function findCategoryId(categories: Category[], name: string | null): string {
+  if (!name) return ''
+  const q = name.toLowerCase().trim()
+  const exact = categories.find(c => c.name.toLowerCase() === q)
+  if (exact) return exact.id
+  const partial = categories.find(c => c.name.toLowerCase().includes(q) || q.includes(c.name.toLowerCase()))
+  if (partial) return partial.id
+  return ''
+}
 
 interface TransactionFormProps {
   open: boolean
@@ -59,16 +69,20 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setType(editingTransaction.type as 'expense' | 'income' | 'recover')
         setStatus(editingTransaction.status as 'paid' | 'pending' | 'recoverable')
         setNotes(editingTransaction.notes ?? '')
+        setInstallments(1)
       } else {
         setDescription(prefill?.description ?? '')
         setValue(prefill?.value ? String(prefill.value) : '')
         setDate(prefill?.date ?? new Date().toISOString().slice(0, 10))
-        setCategoryId(categories[0]?.id ?? '')
         setType((prefill?.type as 'expense' | 'income' | 'recover') ?? 'expense')
-        setStatus('paid')
-        setNotes('')
+        setStatus((prefill?.status as 'paid' | 'pending') ?? 'paid')
+        setNotes(prefill?.notes ?? '')
+        setInstallments(prefill?.installments ?? 1)
+        const catId = prefill?.category_name
+          ? findCategoryId(categories, prefill.category_name)
+          : (categories[0]?.id ?? '')
+        setCategoryId(catId)
       }
-      setInstallments(1)
       setErrors([])
     }
   }, [open, editingTransaction, categories, prefill])
