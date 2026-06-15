@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
@@ -12,7 +13,7 @@ interface MetricCardProps {
   className?: string
 }
 
-export function MetricCard({ label, value, icon: Icon, color = 'var(--accent)', trend, className }: MetricCardProps) {
+export const MetricCard = memo(function MetricCard({ label, value, icon: Icon, color = 'var(--accent)', trend, className }: MetricCardProps) {
   return (
     <Card
       className={cn('p-5 flex flex-col gap-0 overflow-hidden', className)}
@@ -44,4 +45,4 @@ export function MetricCard({ label, value, icon: Icon, color = 'var(--accent)', 
       )}
     </Card>
   )
-}
+})

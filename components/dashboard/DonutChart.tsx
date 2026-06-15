@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { formatCurrency } from '@/lib/formatters'
 import type { CategoryRankItem } from '@/services/dashboardService'
 
@@ -11,7 +11,7 @@ interface DonutChartProps {
   hideLegend?: boolean
 }
 
-export function DonutChart({ data, total, onCategoryClick, hideLegend }: DonutChartProps) {
+export const DonutChart = memo(function DonutChart({ data, total, onCategoryClick, hideLegend }: DonutChartProps) {
   const [hovered, setHovered] = useState<string | null>(null)
 
   if (!total || data.length === 0) {
@@ -89,4 +89,4 @@ export function DonutChart({ data, total, onCategoryClick, hideLegend }: DonutCh
       </div>}
     </div>
   )
-}
+})

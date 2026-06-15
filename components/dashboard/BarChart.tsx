@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { DailyTotal } from '@/services/dashboardService'
 
@@ -9,7 +9,7 @@ interface BarChartProps {
   onDayClick?: (date: string) => void
 }
 
-export function BarChart({ data, onDayClick }: BarChartProps) {
+export const BarChart = memo(function BarChart({ data, onDayClick }: BarChartProps) {
   const [hovered, setHovered] = useState<string | null>(null)
 
   if (!data.length) {
@@ -62,4 +62,4 @@ export function BarChart({ data, onDayClick }: BarChartProps) {
       })}
     </div>
   )
-}
+})

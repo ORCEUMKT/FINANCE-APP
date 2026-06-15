@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus } from 'lucide-react'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
@@ -9,8 +10,6 @@ import { MetricCard } from '@/components/dashboard/MetricCard'
 import { DonutChart } from '@/components/dashboard/DonutChart'
 import { BarChart } from '@/components/dashboard/BarChart'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
-import { TransactionForm } from '@/components/transactions/TransactionForm'
-import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -20,6 +19,9 @@ import { formatCurrency } from '@/lib/formatters'
 import { parseVoiceInput, type VoicePrefill } from '@/lib/voiceParser'
 import { createTransaction } from '@/services/transactionsService'
 import type { TransactionInsert } from '@/types/transaction'
+
+const VoiceMicButton = dynamic(() => import('@/components/ui/VoiceMicButton').then(m => m.VoiceMicButton), { ssr: false })
+const TransactionForm = dynamic(() => import('@/components/transactions/TransactionForm').then(m => m.TransactionForm), { ssr: false })
 
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState<MonthValue>(currentMonth)
@@ -43,6 +45,12 @@ export default function DashboardPage() {
     await refetch()
   }
 
+  const chartTotal = useMemo(
+    () => (metrics?.totalExpenses ?? 0) + (metrics?.totalIncome ?? 0) + (metrics?.totalRecover ?? 0),
+    [metrics?.totalExpenses, metrics?.totalIncome, metrics?.totalRecover]
+  )
+  const balanceColor = (metrics?.liquidTotal ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -55,9 +63,6 @@ export default function DashboardPage() {
   }
 
   if (!metrics) return null
-
-  const chartTotal = metrics.totalExpenses + metrics.totalIncome + metrics.totalRecover
-  const balanceColor = metrics.liquidTotal >= 0 ? 'var(--green)' : 'var(--red)'
 
   return (
     <>
