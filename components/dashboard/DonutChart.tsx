@@ -8,9 +8,10 @@ interface DonutChartProps {
   data: CategoryRankItem[]
   total: number
   onCategoryClick?: (categoryId: string | null) => void
+  hideLegend?: boolean
 }
 
-export function DonutChart({ data, total, onCategoryClick }: DonutChartProps) {
+export function DonutChart({ data, total, onCategoryClick, hideLegend }: DonutChartProps) {
   const [hovered, setHovered] = useState<string | null>(null)
 
   if (!total || data.length === 0) {
@@ -70,7 +71,7 @@ export function DonutChart({ data, total, onCategoryClick }: DonutChartProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+      {!hideLegend && <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
         {data.slice(0, 8).map((d) => (
           <button
             key={d.category_name}
@@ -85,7 +86,7 @@ export function DonutChart({ data, total, onCategoryClick }: DonutChartProps) {
             <span style={{ color: 'var(--text-3)' }}>{d.percentage.toFixed(1)}%</span>
           </button>
         ))}
-      </div>
+      </div>}
     </div>
   )
 }

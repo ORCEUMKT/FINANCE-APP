@@ -7,6 +7,8 @@ export interface DashboardMetrics {
   totalRecover: number
   liquidTotal: number
   transactionCount: number
+  expenseCount: number
+  incomeCount: number
   categoryRanking: CategoryRankItem[]
   dailyTotals: DailyTotal[]
   topTransactions: Transaction[]
@@ -110,6 +112,8 @@ export async function getDashboardMetrics(
     totalRecover,
     liquidTotal,
     transactionCount: txs.length,
+    expenseCount: expenses.length,
+    incomeCount: income.length,
     categoryRanking,
     dailyTotals,
     topTransactions,
