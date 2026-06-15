@@ -7,10 +7,12 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
+import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/lib/formatters'
+import { parseVoiceInput, type VoicePrefill } from '@/lib/voiceParser'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
 
 export default function TransactionsPage() {
@@ -23,8 +25,9 @@ export default function TransactionsPage() {
   const [dateFrom, setDateFrom]     = useState(params.get('date_from') ?? '')
   const [dateTo, setDateTo]         = useState(params.get('date_to') ?? '')
   const [showFilters, setShowFilters] = useState(false)
-  const [formOpen, setFormOpen]     = useState(false)
-  const [editing, setEditing]       = useState<Transaction | null>(null)
+  const [formOpen, setFormOpen]         = useState(false)
+  const [editing, setEditing]           = useState<Transaction | null>(null)
+  const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
   const [deletedBuffer, setDeletedBuffer] = useState<Transaction | null>(null)
 
   const filters = {
@@ -98,9 +101,21 @@ export default function TransactionsPage() {
             {loading ? 'Carregando…' : `${transactions.length} lançamentos · ${formatCurrency(total)}`}
           </p>
         </div>
-        <Button onClick={() => { setEditing(null); setFormOpen(true) }} size="sm" className="gap-1.5">
-          <Plus size={13} /> Novo
-        </Button>
+        <div className="flex items-center gap-2">
+          <VoiceMicButton
+            onResult={(transcript) => {
+              const parsed = parseVoiceInput(transcript)
+              toast(`Detectado: "${transcript}"`)
+              setVoicePrefill(parsed)
+              setEditing(null)
+              setFormOpen(true)
+            }}
+            onError={(msg) => toast(msg)}
+          />
+          <Button onClick={() => { setVoicePrefill(null); setEditing(null); setFormOpen(true) }} size="sm" className="gap-1.5">
+            <Plus size={13} /> Novo
+          </Button>
+        </div>
       </div>
 
       {/* Search + filters */}
@@ -191,10 +206,11 @@ export default function TransactionsPage() {
 
       <TransactionForm
         open={formOpen}
-        onClose={() => { setFormOpen(false); setEditing(null) }}
+        onClose={() => { setFormOpen(false); setEditing(null); setVoicePrefill(null) }}
         onSubmit={handleSubmit}
         categories={categories}
         editingTransaction={editing}
+        prefill={voicePrefill}
       />
     </div>
   )

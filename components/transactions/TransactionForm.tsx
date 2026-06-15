@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { validateTransaction, type FieldError } from '@/lib/validations'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
 import type { Category } from '@/types/category'
+import type { VoicePrefill } from '@/lib/voiceParser'
 
 interface TransactionFormProps {
   open: boolean
@@ -14,6 +15,7 @@ interface TransactionFormProps {
   onSubmit: (data: TransactionInsert) => Promise<void>
   categories: Category[]
   editingTransaction?: Transaction | null
+  prefill?: VoicePrefill | null
 }
 
 function addMonths(dateStr: string, months: number): string {
@@ -33,7 +35,7 @@ const STATUSES = [
   { value: 'pending', label: 'Pendente' },
 ] as const
 
-export function TransactionForm({ open, onClose, onSubmit, categories, editingTransaction }: TransactionFormProps) {
+export function TransactionForm({ open, onClose, onSubmit, categories, editingTransaction, prefill }: TransactionFormProps) {
   const isEdit = !!editingTransaction
 
   const [description, setDescription]   = useState('')
@@ -58,13 +60,18 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setStatus(editingTransaction.status as 'paid' | 'pending' | 'recoverable')
         setNotes(editingTransaction.notes ?? '')
       } else {
-        setDescription(''); setValue(''); setDate(new Date().toISOString().slice(0, 10))
-        setCategoryId(categories[0]?.id ?? ''); setType('expense'); setStatus('paid'); setNotes('')
+        setDescription(prefill?.description ?? '')
+        setValue(prefill?.value ? String(prefill.value) : '')
+        setDate(prefill?.date ?? new Date().toISOString().slice(0, 10))
+        setCategoryId(categories[0]?.id ?? '')
+        setType((prefill?.type as 'expense' | 'income' | 'recover') ?? 'expense')
+        setStatus('paid')
+        setNotes('')
       }
       setInstallments(1)
       setErrors([])
     }
-  }, [open, editingTransaction, categories])
+  }, [open, editingTransaction, categories, prefill])
 
   const fieldError = (field: string) => errors.find((e) => e.field === field)?.message
 
@@ -117,6 +124,20 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Editar Lançamento' : 'Novo Lançamento'}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Voice detection banner */}
+        {!isEdit && prefill?.rawText && (
+          <div
+            className="flex items-start gap-2.5 rounded-[12px] px-3 py-2.5 text-[11px]"
+            style={{ background: 'rgba(124,90,252,0.08)', border: '1px solid rgba(124,90,252,0.18)', color: 'var(--text-2)' }}
+          >
+            <span className="text-base leading-none mt-0.5">🎤</span>
+            <span>
+              <span style={{ color: 'var(--text-3)' }}>Detectado: </span>
+              <em style={{ color: 'var(--text-1)', fontStyle: 'normal', fontWeight: 500 }}>"{prefill.rawText}"</em>
+              <span style={{ color: 'var(--text-3)' }}> — revise e confirme</span>
+            </span>
+          </div>
+        )}
         <Input
           label="Descrição"
           placeholder="Ex: Almoço com clientes"
