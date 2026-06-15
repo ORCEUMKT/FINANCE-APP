@@ -44,7 +44,7 @@ export const DonutChart = memo(function DonutChart({ data, total, onCategoryClic
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="relative w-full max-w-[200px]">
+      <div className="relative w-full max-w-[260px]">
         <svg width="100%" viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
           {segments.map(({ d, item }) => (
             <path
