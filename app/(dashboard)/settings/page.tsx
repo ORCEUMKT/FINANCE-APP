@@ -48,8 +48,8 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-5 max-w-lg">
       <div>
-        <h1 className="text-xl font-800 text-white">Configurações</h1>
-        <p className="text-xs text-white/35 mt-0.5">Gerencie seu perfil</p>
+        <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Configurações</h1>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Gerencie seu perfil</p>
       </div>
 
       {/* Profile */}

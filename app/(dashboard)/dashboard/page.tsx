@@ -197,23 +197,10 @@ export default function DashboardPage() {
       <div className="hidden lg:flex flex-col gap-8">
 
         {/* Page header */}
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-start gap-4">
-            <div
-              className="w-[3px] h-12 rounded-full mt-0.5 flex-shrink-0"
-              style={{ background: 'var(--accent)', boxShadow: 'var(--glow-accent)' }}
-            />
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[2.5px] mb-1.5" style={{ color: 'var(--accent)' }}>
-                Finanças
-              </p>
-              <h1 className="text-[22px] font-bold leading-none" style={{ color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
-                Dashboard
-              </h1>
-              <p className="text-[12px] mt-1.5" style={{ color: 'var(--text-3)' }}>
-                Visão geral das suas finanças
-              </p>
-            </div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Dashboard</h1>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Visão geral das suas finanças</p>
           </div>
           <div className="flex items-center gap-3">
             <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />

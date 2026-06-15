@@ -87,12 +87,9 @@ export default function CategoriesPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-start gap-4">
-          <div className="w-[3px] h-12 rounded-full mt-0.5 flex-shrink-0" style={{ background: 'var(--accent)', boxShadow: 'var(--glow-accent)' }} />
-          <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[2.5px] mb-1.5" style={{ color: 'var(--accent)' }}>Configurações</p>
-            <h1 className="text-[22px] font-bold leading-none" style={{ color: 'var(--text-1)' }}>Categorias</h1>
-          </div>
+        <div>
+          <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Categorias</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Gerencie suas categorias</p>
         </div>
         <Button onClick={openAdd} size="sm" className="gap-1.5">
           <Plus size={13} /> Nova

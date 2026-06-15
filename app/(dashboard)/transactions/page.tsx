@@ -120,8 +120,8 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-800 text-white">Extrato</h1>
-          <p className="text-xs text-white/35 mt-0.5">
+          <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Extrato</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
             {loading ? 'Carregando…' : `${transactions.length} lançamentos · ${formatCurrency(total)}`}
           </p>
         </div>
