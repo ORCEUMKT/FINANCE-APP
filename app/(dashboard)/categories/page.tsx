@@ -12,9 +12,20 @@ import { validateCategory } from '@/lib/validations'
 import type { Category, CategoryInsert } from '@/types/category'
 
 const PRESET_COLORS = [
-  '#4ECCA3','#F7B731','#A29BFE','#FD79A8','#74B9FF','#55EFC4',
-  '#FDCB6E','#E17055','#FFA8C5','#81ECEC','#FFD32A','#C7A0FF',
-  '#FF7584','#89F2C2',
+  '#EF4444', // Vermelho
+  '#F97316', // Laranja
+  '#EAB308', // Amarelo
+  '#22C55E', // Verde
+  '#10B981', // Esmeralda
+  '#14B8A6', // Teal
+  '#06B6D4', // Ciano
+  '#3B82F6', // Azul
+  '#6366F1', // Índigo
+  '#8B5CF6', // Violeta
+  '#A855F7', // Roxo
+  '#EC4899', // Rosa
+  '#F43F5E', // Crimson
+  '#84CC16', // Lima
 ]
 
 interface FormState { name: string; color: string; icon: string; type: Category['type'] }
