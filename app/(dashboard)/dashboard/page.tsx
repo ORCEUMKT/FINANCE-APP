@@ -220,9 +220,9 @@ export default function DashboardPage() {
 
         {/* 4-card metric grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <MetricCard label="Saldo Líquido" value={metrics.liquidTotal} icon={Activity} color="var(--accent)" trend={metrics.liquidTotal >= 0 ? 'Positivo' : 'Negativo'} />
           <MetricCard label="Despesas" value={metrics.totalExpenses} icon={TrendingDown} color="var(--red)" trend={`${metrics.expenseCount} lançamentos`} />
           <MetricCard label="Receitas" value={metrics.totalIncome} icon={TrendingUp} color="var(--green)" trend={`${metrics.incomeCount} receitas`} />
-          <MetricCard label="Saldo Líquido" value={metrics.liquidTotal} icon={Activity} color="var(--accent)" trend={metrics.liquidTotal >= 0 ? 'Positivo' : 'Negativo'} />
           {metrics.totalRecover > 0 && (
             <MetricCard label="A Recuperar" value={metrics.totalRecover} icon={RotateCcw} color="var(--orange)" />
           )}
