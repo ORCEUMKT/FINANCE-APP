@@ -131,3 +131,14 @@ select {
   -moz-appearance: none;
   appearance: none;
 }
+
+/* Number inputs — hide native spinner arrows for a clean, modern look */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
