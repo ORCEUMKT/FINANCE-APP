@@ -56,7 +56,7 @@ export function Sidebar({ user: _ }: { user: unknown }) {
         {/* Expanded: full logo */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo/logo.png?v=2"
+          src="/logo/logo.png?v=4"
           alt="Logo"
           style={{
             height: '20px',
@@ -102,19 +102,19 @@ function NavItem({
   const [hovered, setHovered] = useState(false)
 
   const bg = active
-    ? 'rgba(124,90,252,0.22)'
+    ? 'rgba(230,229,216,0.22)'
     : hovered
     ? 'rgba(255,255,255,0.09)'
     : 'rgba(255,255,255,0.03)'
 
   const border = active
-    ? '1px solid rgba(124,90,252,0.4)'
+    ? '1px solid rgba(230,229,216,0.4)'
     : hovered
     ? '1px solid rgba(255,255,255,0.12)'
     : '1px solid rgba(255,255,255,0.05)'
 
   const shadow = active
-    ? '0 0 24px rgba(124,90,252,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+    ? '0 0 24px rgba(230,229,216,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
     : 'none'
 
   const color = active ? 'var(--accent)' : hovered ? 'var(--text-1)' : 'var(--text-3)'

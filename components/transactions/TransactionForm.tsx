@@ -124,7 +124,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
     fontWeight: 600,
     border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
     background: active ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
-    color: active ? '#fff' : 'var(--text-3)',
+    color: active ? 'var(--accent-text)' : 'var(--text-3)',
     cursor: 'pointer',
     transition: 'all .15s',
     fontFamily: 'inherit',
@@ -143,7 +143,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         {!isEdit && prefill?.rawText && (
           <div
             className="flex items-start gap-2.5 rounded-[12px] px-3 py-2.5 text-[11px]"
-            style={{ background: 'rgba(124,90,252,0.08)', border: '1px solid rgba(124,90,252,0.18)', color: 'var(--text-2)' }}
+            style={{ background: 'rgba(230,229,216,0.08)', border: '1px solid rgba(230,229,216,0.18)', color: 'var(--text-2)' }}
           >
             <span className="text-base leading-none mt-0.5">🎤</span>
             <span>

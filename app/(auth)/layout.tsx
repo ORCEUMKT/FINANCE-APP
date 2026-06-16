@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex justify-center mb-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo/logo.png?v=2"
+            src="/logo/logo.png?v=4"
             alt="Finance"
             style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
           />

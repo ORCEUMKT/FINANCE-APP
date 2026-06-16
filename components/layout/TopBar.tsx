@@ -10,7 +10,7 @@ export function TopBar({ user: _ }: { user: User | null }) {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/logo/logo.png?v=2"
+        src="/logo/logo.png?v=4"
         alt="Logo"
         style={{ height: '20px', width: 'auto', objectFit: 'contain' }}
       />

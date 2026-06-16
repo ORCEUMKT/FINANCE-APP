@@ -46,9 +46,9 @@ export const BarChart = memo(function BarChart({ data, onDayClick }: BarChartPro
                 height: h,
                 background: isHov
                   ? 'var(--accent)'
-                  : `linear-gradient(180deg, rgba(124,90,252,0.55), rgba(124,90,252,0.18))`,
+                  : `linear-gradient(180deg, rgba(230,229,216,0.55), rgba(230,229,216,0.18))`,
                 opacity: d.total > 0 ? 1 : 0.2,
-                border: '1px solid rgba(124,90,252,0.15)',
+                border: '1px solid rgba(230,229,216,0.15)',
               }}
             />
             <span

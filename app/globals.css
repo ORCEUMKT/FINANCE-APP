@@ -2,13 +2,13 @@
 
 /* ─── Design Tokens — FLOWTASK Language ─────────────────────── */
 :root {
-  /* Depth layers */
-  --bg:        #0b0b0f;
-  --surface:   #151520;
-  --surface-2: #1b1b28;
-  --sidebar:   #080810;
-  --hover:     #1a1a24;
-  --active:    #1e1e2a;
+  /* Depth layers — base #212624 */
+  --bg:        #212624;
+  --surface:   #2b3130;
+  --surface-2: #343c39;
+  --sidebar:   #0e1010;
+  --hover:     #2f3734;
+  --active:    #39413e;
 
   /* Borders */
   --border:        rgba(255,255,255,0.07);
@@ -20,10 +20,11 @@
   --text-2: #b0b0c8;
   --text-3: #888898;
 
-  /* Accent — purple */
-  --accent:      #7c5afc;
-  --accent-dim:  rgba(124,90,252,0.10);
-  --accent-glow: rgba(124,90,252,0.18);
+  /* Accent — cream (light, so text on top of it must be dark) */
+  --accent:      #e6e5d8;
+  --accent-text: #212624;
+  --accent-dim:  rgba(230,229,216,0.10);
+  --accent-glow: rgba(230,229,216,0.18);
 
   /* Status palette */
   --green:   #3ecf8e;
@@ -35,7 +36,7 @@
   /* Shadows */
   --shadow-card:     0 1px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
   --shadow-elevated: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
-  --glow-accent:     0 0 28px rgba(124,90,252,0.15);
+  --glow-accent:     0 0 28px rgba(230,229,216,0.15);
 }
 
 /* ─── Base ────────────────────────────────────────────────────── */
@@ -52,13 +53,13 @@ body {
   font-feature-settings: "cv11", "ss01";
 }
 
-/* Ambient top light — ultra-subtle purple */
+/* Ambient top light — ultra-subtle cream */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse 60% 30% at 60% -5%, rgba(124,90,252,0.04), transparent);
+  background: radial-gradient(ellipse 60% 30% at 60% -5%, rgba(230,229,216,0.04), transparent);
   z-index: 0;
 }
 

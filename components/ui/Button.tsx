@@ -10,7 +10,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, children, disabled, style, ...props }, ref) => {
     const vs: React.CSSProperties =
-      variant === 'primary'   ? { background: 'var(--accent)', color: '#fff', boxShadow: 'var(--glow-accent)' } :
+      variant === 'primary'   ? { background: 'var(--accent)', color: 'var(--accent-text)', boxShadow: 'var(--glow-accent)' } :
       variant === 'secondary' ? { background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-2)' } :
       variant === 'ghost'     ? { background: 'transparent', color: 'var(--text-2)' } :
                                 { background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', color: '#f87171' }

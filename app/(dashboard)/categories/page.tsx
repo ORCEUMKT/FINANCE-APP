@@ -38,7 +38,7 @@ const segBtnStyle = (active: boolean): React.CSSProperties => ({
   flex: 1, padding: '10px 0', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
   border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
   background: active ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
-  color: active ? '#fff' : 'var(--text-3)', cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
+  color: active ? 'var(--accent-text)' : 'var(--text-3)', cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
 })
 
 export default function CategoriesPage() {

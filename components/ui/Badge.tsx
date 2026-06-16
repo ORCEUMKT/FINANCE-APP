@@ -5,7 +5,7 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   color?: string
 }
 
-export function Badge({ className, color = '#7c5afc', children, style, ...props }: BadgeProps) {
+export function Badge({ className, color = '#e6e5d8', children, style, ...props }: BadgeProps) {
   return (
     <span
       className={cn('inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-wide', className)}

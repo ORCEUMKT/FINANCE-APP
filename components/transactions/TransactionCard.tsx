@@ -85,7 +85,7 @@ export const TransactionCard = memo(function TransactionCard({ transaction: tx, 
             <div>
               <span className="text-[9px] uppercase tracking-[1.5px]" style={{ color: 'var(--text-3)' }}>Status</span>
               <div className="mt-1.5">
-                <Badge color={isRecover ? '#f87171' : isRecovered ? '#3ecf8e' : '#7c5afc'}>
+                <Badge color={isRecover ? '#f87171' : isRecovered ? '#3ecf8e' : '#e6e5d8'}>
                   {STATUS_LABELS[tx.status] ?? tx.status}
                 </Badge>
               </div>

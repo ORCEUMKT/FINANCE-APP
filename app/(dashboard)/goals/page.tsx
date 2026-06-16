@@ -136,7 +136,7 @@ export default function GoalsPage() {
                       onClick={() => saveGoal(cat.id)}
                       disabled={saving}
                       className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 disabled:opacity-50"
-                      style={{ background: 'var(--accent)', color: '#fff' }}
+                      style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
                     >
                       <Check size={13} />
                     </button>
