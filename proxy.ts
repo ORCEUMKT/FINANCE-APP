@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   const isAuthRoute  = ['/login', '/register', '/forgot-password'].some((p) => pathname.startsWith(p))
-  const isDashRoute  = ['/dashboard', '/transactions', '/categories', '/settings'].some((p) => pathname.startsWith(p))
+  const isDashRoute  = ['/dashboard', '/transactions', '/categories', '/goals', '/settings'].some((p) => pathname.startsWith(p))
 
   if (!user && isDashRoute) {
     return NextResponse.redirect(new URL('/login', request.url))

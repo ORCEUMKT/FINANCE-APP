@@ -1,9 +1,12 @@
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const dateFormatter = new Intl.DateTimeFormat('pt-BR')
+
 export function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return currencyFormatter.format(value)
 }
 
 export function formatDate(date: string): string {
-  return new Date(date + 'T00:00:00').toLocaleDateString('pt-BR')
+  return dateFormatter.format(new Date(date + 'T00:00:00'))
 }
 
 export function formatDateInput(date: string): string {

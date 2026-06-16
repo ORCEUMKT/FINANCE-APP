@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { ChevronDown, Edit2, Copy, CheckCircle, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import { Badge } from '@/components/ui/Badge'
@@ -20,7 +20,7 @@ const STATUS_LABELS: Record<string, string> = {
   paid: 'Pago', pending: 'Pendente', recoverable: 'A Recuperar', recovered: 'Recuperado',
 }
 
-export function TransactionCard({ transaction: tx, onEdit, onDelete, onDuplicate, onMarkRecovered, rank }: TransactionCardProps) {
+export const TransactionCard = memo(function TransactionCard({ transaction: tx, onEdit, onDelete, onDuplicate, onMarkRecovered, rank }: TransactionCardProps) {
   const [open, setOpen] = useState(false)
 
   const isRecover   = tx.type === 'recover' && tx.status !== 'recovered'
@@ -119,4 +119,4 @@ export function TransactionCard({ transaction: tx, onEdit, onDelete, onDuplicate
       )}
     </div>
   )
-}
+})

@@ -148,7 +148,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
             <span className="text-base leading-none mt-0.5">🎤</span>
             <span>
               <span style={{ color: 'var(--text-3)' }}>Detectado: </span>
-              <em style={{ color: 'var(--text-1)', fontStyle: 'normal', fontWeight: 500 }}>"{prefill.rawText}"</em>
+              <em style={{ color: 'var(--text-1)', fontStyle: 'normal', fontWeight: 500 }}>&quot;{prefill.rawText}&quot;</em>
               <span style={{ color: 'var(--text-3)' }}> — revise e confirme</span>
             </span>
           </div>

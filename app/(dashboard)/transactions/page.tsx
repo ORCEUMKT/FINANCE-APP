@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
@@ -17,7 +17,6 @@ import { parseVoiceInput, type VoicePrefill } from '@/lib/voiceParser'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
 
 export default function TransactionsPage() {
-  const router = useRouter()
   const params = useSearchParams()
   const { toast } = useToast()
 
