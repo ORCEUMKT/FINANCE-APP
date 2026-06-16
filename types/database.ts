@@ -30,6 +30,12 @@ export type Database = {
         Update: { id?: string; user_id?: string; category_id?: string | null; account_id?: string | null; description?: string; value?: number; date?: string; type?: string; status?: string; notes?: string | null }
         Relationships: []
       }
+      category_goals: {
+        Row:    { id: string; user_id: string; category_id: string; amount: number; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; category_id: string; amount: number; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; category_id?: string; amount?: number }
+        Relationships: []
+      }
     }
     Views:     { [_ in never]: never }
     Functions: { [_ in never]: never }

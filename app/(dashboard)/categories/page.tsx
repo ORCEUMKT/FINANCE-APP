@@ -1,15 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, Tag } from 'lucide-react'
+import { Plus, Edit2, Trash2, Tag, Target } from 'lucide-react'
 import { useCategories } from '@/hooks/useCategories'
+import { useGoals } from '@/hooks/useGoals'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import { validateCategory } from '@/lib/validations'
+import { formatCurrency } from '@/lib/formatters'
 import type { Category, CategoryInsert } from '@/types/category'
+import type { CategoryGoal } from '@/types/goal'
 
 const PRESET_COLORS = [
   '#f87171', // Vermelho     — var(--red)
@@ -28,8 +31,8 @@ const PRESET_COLORS = [
   '#a3e635', // Lima
 ]
 
-interface FormState { name: string; color: string; icon: string; type: Category['type'] }
-const DEFAULT_FORM: FormState = { name: '', color: '#a78bfa', icon: 'tag', type: 'expense' }
+interface FormState { name: string; color: string; icon: string; type: Category['type']; goal: string }
+const DEFAULT_FORM: FormState = { name: '', color: '#a78bfa', icon: 'tag', type: 'expense', goal: '' }
 
 const TYPE_LABEL: Record<Category['type'], string> = { expense: 'Despesa', income: 'Receita', both: 'Ambos' }
 const TYPE_COLOR: Record<Category['type'], string> = { expense: 'var(--red)', income: 'var(--green)', both: 'var(--blue)' }
@@ -43,6 +46,7 @@ const segBtnStyle = (active: boolean): React.CSSProperties => ({
 
 export default function CategoriesPage() {
   const { categories, loading, add, update, remove } = useCategories()
+  const { goals, upsert: upsertGoal, remove: removeGoal } = useGoals()
   const { toast } = useToast()
   const [formOpen, setFormOpen]   = useState(false)
   const [editing, setEditing]     = useState<Category | null>(null)
@@ -51,13 +55,18 @@ export default function CategoriesPage() {
   const [saving, setSaving]       = useState(false)
   const [deleting, setDeleting]   = useState<string | null>(null)
 
+  function goalFor(categoryId: string): CategoryGoal | undefined {
+    return goals.find((g) => g.category_id === categoryId)
+  }
+
   function openAdd() {
     setEditing(null); setForm(DEFAULT_FORM); setFormError(''); setFormOpen(true)
   }
 
   function openEdit(cat: Category) {
     setEditing(cat)
-    setForm({ name: cat.name, color: cat.color, icon: cat.icon, type: cat.type })
+    const existingGoal = goalFor(cat.id)
+    setForm({ name: cat.name, color: cat.color, icon: cat.icon, type: cat.type, goal: existingGoal ? String(existingGoal.amount) : '' })
     setFormError(''); setFormOpen(true)
   }
 
@@ -68,12 +77,22 @@ export default function CategoriesPage() {
     setSaving(true)
     try {
       const payload: CategoryInsert = { name: form.name.trim(), color: form.color, icon: form.icon, type: form.type }
+      const goalAmount = parseFloat(form.goal)
+      let categoryId = editing?.id
       if (editing) {
         await update(editing.id, payload)
         toast('Categoria atualizada!')
       } else {
-        await add(payload)
+        const created = await add(payload)
+        categoryId = created.id
         toast('Categoria criada!')
+      }
+      if (categoryId) {
+        if (form.goal && goalAmount > 0) {
+          await upsertGoal({ category_id: categoryId, amount: goalAmount })
+        } else if (editing && goalFor(editing.id)) {
+          await removeGoal(editing.id)
+        }
       }
       setFormOpen(false)
     } catch (err: unknown) {
@@ -130,6 +149,7 @@ export default function CategoriesPage() {
               <CategoryCard
                 key={cat.id}
                 cat={cat}
+                goal={goalFor(cat.id)}
                 isDeleting={deleting === cat.id}
                 onEdit={() => openEdit(cat)}
                 onDelete={() => handleDelete(cat)}
@@ -198,6 +218,15 @@ export default function CategoriesPage() {
               />
             </div>
           </div>
+          <Input
+            label="Meta mensal (opcional)"
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="Ex: 500,00"
+            value={form.goal}
+            onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
+          />
           {formError && <p className="text-xs" style={{ color: 'var(--red)' }}>{formError}</p>}
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="secondary" onClick={() => setFormOpen(false)} className="flex-1">
@@ -214,9 +243,10 @@ export default function CategoriesPage() {
 }
 
 function CategoryCard({
-  cat, isDeleting, onEdit, onDelete,
+  cat, goal, isDeleting, onEdit, onDelete,
 }: {
   cat: Category
+  goal?: CategoryGoal
   isDeleting: boolean
   onEdit: () => void
   onDelete: () => void
@@ -247,6 +277,13 @@ function CategoryCard({
           </span>
         </div>
       </div>
+
+      {goal && (
+        <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-3)' }}>
+          <Target size={10} />
+          Meta: {formatCurrency(goal.amount)}
+        </div>
+      )}
 
       {/* Action buttons — sempre visíveis */}
       <div className="flex gap-1.5">

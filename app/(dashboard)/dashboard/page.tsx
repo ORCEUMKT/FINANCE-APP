@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus } from 'lucide-react'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import { useCategories } from '@/hooks/useCategories'
+import { useGoals } from '@/hooks/useGoals'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { DonutChart } from '@/components/dashboard/DonutChart'
 import { BarChart } from '@/components/dashboard/BarChart'
+import { GoalsProgress } from '@/components/dashboard/GoalsProgress'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
 import { Card } from '@/components/ui/Card'
@@ -28,6 +30,7 @@ export default function DashboardPage() {
   const { dateFrom, dateTo } = monthRange(selectedMonth)
   const { metrics, loading, refetch } = useDashboardMetrics(dateFrom, dateTo)
   const { categories } = useCategories()
+  const { goals } = useGoals()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -140,6 +143,21 @@ export default function DashboardPage() {
           />
         </Card>
 
+        {/* Metas por categoria */}
+        {goals.length > 0 && (
+          <Card className="p-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
+              Metas
+            </p>
+            <GoalsProgress
+              goals={goals}
+              categories={categories}
+              categoryRanking={metrics.categoryRanking}
+              onCategoryClick={(catId) => router.push(`/transactions?category=${catId}`)}
+            />
+          </Card>
+        )}
+
         {/* Gastos por dia */}
         <Card className="p-5">
           <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
@@ -221,7 +239,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts */}
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className={`grid gap-4 ${goals.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
           <Card className="p-5">
             <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
               Composição
@@ -257,6 +275,20 @@ export default function DashboardPage() {
               ))}
             </div>
           </Card>
+
+          {goals.length > 0 && (
+            <Card className="p-5">
+              <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
+                Metas
+              </p>
+              <GoalsProgress
+                goals={goals}
+                categories={categories}
+                categoryRanking={metrics.categoryRanking}
+                onCategoryClick={(catId) => router.push(`/transactions?category=${catId}`)}
+              />
+            </Card>
+          )}
         </div>
 
         {/* Top transactions */}
