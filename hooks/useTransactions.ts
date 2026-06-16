@@ -3,55 +3,79 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Transaction, TransactionFilters, TransactionInsert, TransactionUpdate } from '@/types/transaction'
 import * as svc from '@/services/transactionsService'
+import { getCached, setCached } from '@/lib/queryCache'
 
 export function useTransactions(filters?: TransactionFilters) {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
+  const cacheKey = `transactions:${JSON.stringify(filters)}`
+  const cached = getCached<Transaction[]>(cacheKey)
+  const [transactions, setTransactions] = useState<Transaction[]>(cached ?? [])
+  const [loading, setLoading] = useState(cached === undefined)
   const [error, setError] = useState<string | null>(null)
 
   const fetch = useCallback(async () => {
-    setLoading(true)
+    if (getCached<Transaction[]>(cacheKey) === undefined) setLoading(true)
     setError(null)
     try {
       const data = await svc.getTransactions(filters)
       setTransactions(data)
+      setCached(cacheKey, data)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao carregar lançamentos.')
     } finally {
       setLoading(false)
     }
-  }, [JSON.stringify(filters)]) // eslint-disable-line
+  }, [cacheKey]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
 
   const add = useCallback(async (payload: TransactionInsert) => {
     const tx = await svc.createTransaction(payload)
-    setTransactions((prev) => [tx, ...prev])
+    setTransactions((prev) => {
+      const next = [tx, ...prev]
+      setCached(cacheKey, next)
+      return next
+    })
     return tx
-  }, [])
+  }, [cacheKey])
 
   const update = useCallback(async (id: string, payload: TransactionUpdate) => {
     const tx = await svc.updateTransaction(id, payload)
-    setTransactions((prev) => prev.map((t) => (t.id === id ? tx : t)))
+    setTransactions((prev) => {
+      const next = prev.map((t) => (t.id === id ? tx : t))
+      setCached(cacheKey, next)
+      return next
+    })
     return tx
-  }, [])
+  }, [cacheKey])
 
   const remove = useCallback(async (id: string) => {
     await svc.deleteTransaction(id)
-    setTransactions((prev) => prev.filter((t) => t.id !== id))
-  }, [])
+    setTransactions((prev) => {
+      const next = prev.filter((t) => t.id !== id)
+      setCached(cacheKey, next)
+      return next
+    })
+  }, [cacheKey])
 
   const duplicate = useCallback(async (id: string) => {
     const tx = await svc.duplicateTransaction(id)
-    setTransactions((prev) => [tx, ...prev])
+    setTransactions((prev) => {
+      const next = [tx, ...prev]
+      setCached(cacheKey, next)
+      return next
+    })
     return tx
-  }, [])
+  }, [cacheKey])
 
   const markRecovered = useCallback(async (id: string) => {
     const tx = await svc.markAsRecovered(id)
-    setTransactions((prev) => prev.map((t) => (t.id === id ? tx : t)))
+    setTransactions((prev) => {
+      const next = prev.map((t) => (t.id === id ? tx : t))
+      setCached(cacheKey, next)
+      return next
+    })
     return tx
-  }, [])
+  }, [cacheKey])
 
   return { transactions, loading, error, refetch: fetch, add, update, remove, duplicate, markRecovered }
 }

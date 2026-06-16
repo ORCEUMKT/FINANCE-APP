@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
@@ -17,6 +17,14 @@ import { parseVoiceInput, type VoicePrefill } from '@/lib/voiceParser'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
 
 export default function TransactionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TransactionsContent />
+    </Suspense>
+  )
+}
+
+function TransactionsContent() {
   const params = useSearchParams()
   const { toast } = useToast()
 

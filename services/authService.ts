@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { clearCache } from '@/lib/queryCache'
 
 export async function signIn(email: string, password: string) {
   const supabase = createClient()
@@ -19,6 +20,7 @@ export async function signUp(email: string, password: string, name: string) {
 export async function signOut() {
   const supabase = createClient()
   const { error } = await supabase.auth.signOut()
+  clearCache()
   if (error) throw error
 }
 

@@ -1,15 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { TopBar } from '@/components/layout/TopBar'
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
-
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     // pt-11 aqui: toda a área abaixo começa em y=44, então absolute top-0 da Sidebar fica abaixo da TopBar
     <div className="relative flex flex-col min-h-screen pt-11 lg:pt-0" style={{ background: 'var(--bg)' }}>
@@ -20,10 +13,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div style={{ position:'absolute', top:'55%', left:'10%', width:'300px', height:'300px', borderRadius:'50%', background:'radial-gradient(circle, rgba(96,165,250,0.04) 0%, transparent 70%)', filter:'blur(80px)' }} />
       </div>
 
-      <TopBar user={user} />
+      <TopBar user={null} />
 
       <div className="flex flex-1 relative">
-        <Sidebar user={user} />
+        <Sidebar user={null} />
         <main className="flex-1 min-w-0 pb-24 lg:pb-0 overflow-y-auto relative z-10 lg:pl-16">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-8">
             {children}
