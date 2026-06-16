@@ -12,24 +12,24 @@ import { validateCategory } from '@/lib/validations'
 import type { Category, CategoryInsert } from '@/types/category'
 
 const PRESET_COLORS = [
-  '#EF4444', // Vermelho
-  '#F97316', // Laranja
-  '#EAB308', // Amarelo
-  '#22C55E', // Verde
-  '#10B981', // Esmeralda
-  '#14B8A6', // Teal
-  '#06B6D4', // Ciano
-  '#3B82F6', // Azul
-  '#6366F1', // Índigo
-  '#8B5CF6', // Violeta
-  '#A855F7', // Roxo
-  '#EC4899', // Rosa
-  '#F43F5E', // Crimson
-  '#84CC16', // Lima
+  '#f87171', // Vermelho     — var(--red)
+  '#fb923c', // Laranja
+  '#fbbf24', // Âmbar
+  '#3ecf8e', // Verde        — var(--green)
+  '#34d399', // Esmeralda
+  '#2dd4bf', // Teal
+  '#22d3ee', // Ciano
+  '#60a5fa', // Azul         — var(--blue)
+  '#818cf8', // Índigo
+  '#a78bfa', // Violeta
+  '#c084fc', // Roxo
+  '#f472b6', // Rosa
+  '#fb7185', // Crimson
+  '#a3e635', // Lima
 ]
 
 interface FormState { name: string; color: string; icon: string; type: Category['type'] }
-const DEFAULT_FORM: FormState = { name: '', color: '#A29BFE', icon: 'tag', type: 'expense' }
+const DEFAULT_FORM: FormState = { name: '', color: '#a78bfa', icon: 'tag', type: 'expense' }
 
 const TYPE_LABEL: Record<Category['type'], string> = { expense: 'Despesa', income: 'Receita', both: 'Ambos' }
 const TYPE_COLOR: Record<Category['type'], string> = { expense: 'var(--red)', income: 'var(--green)', both: 'var(--blue)' }
