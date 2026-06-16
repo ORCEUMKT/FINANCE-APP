@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ArrowLeftRight, Tag, Settings, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, Tag, Target, Settings, type LucideIcon } from 'lucide-react'
 
 const NAV = [
   { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
   { href: '/transactions', label: 'Extrato',       icon: ArrowLeftRight },
   { href: '/categories',   label: 'Categorias',    icon: Tag },
+  { href: '/goals',        label: 'Metas',         icon: Target },
   { href: '/settings',     label: 'Configurações', icon: Settings },
 ]
 
