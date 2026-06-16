@@ -3,12 +3,12 @@
 /* ─── Design Tokens — FLOWTASK Language ─────────────────────── */
 :root {
   /* Depth layers — base #212624, darkened */
-  --bg:        #0d1110;
-  --surface:   #161c19;
-  --surface-2: #1c2320;
-  --sidebar:   #060807;
-  --hover:     #192019;
-  --active:    #20291f;
+  --bg:        #111413;
+  --surface:   #1a1f1d;
+  --surface-2: #212720;
+  --sidebar:   #080a09;
+  --hover:     #1d2220;
+  --active:    #262d28;
 
   /* Borders */
   --border:        rgba(255,255,255,0.07);
