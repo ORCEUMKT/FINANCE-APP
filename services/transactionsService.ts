@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { parseInstallment } from '@/lib/installments'
 import type {
   Transaction,
   TransactionInsert,
@@ -95,4 +96,63 @@ export async function duplicateTransaction(id: string): Promise<Transaction> {
 
 export async function markAsRecovered(id: string): Promise<Transaction> {
   return updateTransaction(id, { status: 'recovered' })
+}
+
+export async function deleteInstallmentGroup(transaction: Transaction): Promise<string[]> {
+  const supabase = createClient()
+  const parsed = parseInstallment(transaction.description)
+  if (!parsed) {
+    await deleteTransaction(transaction.id)
+    return [transaction.id]
+  }
+
+  const { data: siblings } = await supabase
+    .from('transactions')
+    .select('id')
+    .ilike('description', `${parsed.base} (%/${parsed.total})`)
+
+  const ids = (siblings ?? []).map((s: { id: string }) => s.id)
+  if (ids.length === 0) {
+    await deleteTransaction(transaction.id)
+    return [transaction.id]
+  }
+
+  const { error } = await supabase.from('transactions').delete().in('id', ids)
+  if (error) throw error
+  return ids
+}
+
+export async function updateInstallmentGroupDates(
+  transaction: Transaction,
+  newDate: string,
+): Promise<void> {
+  const supabase = createClient()
+  const parsed = parseInstallment(transaction.description)
+  if (!parsed) {
+    await updateTransaction(transaction.id, { date: newDate })
+    return
+  }
+
+  const origMs = new Date(transaction.date + 'T00:00:00').getTime()
+  const newMs = new Date(newDate + 'T00:00:00').getTime()
+  const deltaDays = Math.round((newMs - origMs) / (1000 * 60 * 60 * 24))
+
+  const { data: siblings } = await supabase
+    .from('transactions')
+    .select('id, date')
+    .ilike('description', `${parsed.base} (%/${parsed.total})`)
+
+  if (!siblings || siblings.length === 0) {
+    await updateTransaction(transaction.id, { date: newDate })
+    return
+  }
+
+  await Promise.all(
+    (siblings as { id: string; date: string }[]).map((s) => {
+      const shifted = new Date(
+        new Date(s.date + 'T00:00:00').getTime() + deltaDays * 86400000,
+      ).toISOString().slice(0, 10)
+      return updateTransaction(s.id, { date: shifted })
+    }),
+  )
 }

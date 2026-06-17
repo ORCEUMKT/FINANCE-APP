@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/lib/formatters'
 import { parseVoiceInput, type VoicePrefill } from '@/lib/voiceParser'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
+import type { SubmitOptions } from '@/components/transactions/TransactionForm'
 
 export default function TransactionsPage() {
   return (
@@ -62,12 +63,18 @@ function TransactionsContent() {
     date_to: dateTo || undefined,
   }
 
-  const { transactions, loading, add, update, remove, duplicate, markRecovered } = useTransactions(filters)
+  const { transactions, loading, refetch, add, update, remove, duplicate, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
 
-  const handleSubmit = useCallback(async (data: TransactionInsert) => {
+  const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
     if (editing) {
-      await update(editing.id, data)
+      if (options?.cascadeDates && data.date !== editing.date) {
+        await updateGroupDates(editing, data.date)
+        await update(editing.id, data)
+        refetch()
+      } else {
+        await update(editing.id, data)
+      }
       toast('Lançamento atualizado!')
     } else {
       await add(data)
@@ -75,7 +82,7 @@ function TransactionsContent() {
     }
     setEditing(null)
     setFormOpen(false)
-  }, [editing, add, update, toast])
+  }, [editing, add, update, updateGroupDates, refetch, toast])
 
   const handleDelete = useCallback(async (id: string) => {
     const tx = transactions.find((t) => t.id === id)
@@ -101,6 +108,11 @@ function TransactionsContent() {
       },
     })
   }, [transactions, remove, add, toast, deletedBuffer])
+
+  const handleDeleteGroup = useCallback(async (tx: Transaction) => {
+    await removeGroup(tx)
+    toast('Todas as parcelas excluídas!')
+  }, [removeGroup, toast])
 
   const handleDuplicate = useCallback(async (id: string) => {
     await duplicate(id)
@@ -222,6 +234,7 @@ function TransactionsContent() {
               transaction={tx}
               onEdit={(t) => { setEditing(t); setFormOpen(true) }}
               onDelete={handleDelete}
+              onDeleteGroup={handleDeleteGroup}
               onDuplicate={handleDuplicate}
               onMarkRecovered={handleMarkRecovered}
             />

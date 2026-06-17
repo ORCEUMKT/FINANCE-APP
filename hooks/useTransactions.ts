@@ -31,12 +31,15 @@ export function useTransactions(filters?: TransactionFilters) {
   const add = useCallback(async (payload: TransactionInsert) => {
     const tx = await svc.createTransaction(payload)
     setTransactions((prev) => {
+      // Only show in current view if it falls within the active date filter
+      if (filters?.date_from && tx.date < filters.date_from) return prev
+      if (filters?.date_to && tx.date > filters.date_to) return prev
       const next = [tx, ...prev]
       setCached(cacheKey, next)
       return next
     })
     return tx
-  }, [cacheKey])
+  }, [cacheKey, filters?.date_from, filters?.date_to]) // eslint-disable-line
 
   const update = useCallback(async (id: string, payload: TransactionUpdate) => {
     const tx = await svc.updateTransaction(id, payload)
@@ -77,5 +80,18 @@ export function useTransactions(filters?: TransactionFilters) {
     return tx
   }, [cacheKey])
 
-  return { transactions, loading, error, refetch: fetch, add, update, remove, duplicate, markRecovered }
+  const removeGroup = useCallback(async (transaction: Transaction) => {
+    const ids = await svc.deleteInstallmentGroup(transaction)
+    setTransactions((prev) => {
+      const next = prev.filter((t) => !ids.includes(t.id))
+      setCached(cacheKey, next)
+      return next
+    })
+  }, [cacheKey])
+
+  const updateGroupDates = useCallback(async (transaction: Transaction, newDate: string) => {
+    await svc.updateInstallmentGroupDates(transaction, newDate)
+  }, [])
+
+  return { transactions, loading, error, refetch: fetch, add, update, remove, duplicate, markRecovered, removeGroup, updateGroupDates }
 }

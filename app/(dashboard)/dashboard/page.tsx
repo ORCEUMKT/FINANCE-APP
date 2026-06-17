@@ -198,6 +198,7 @@ export default function DashboardPage() {
                   rank={i}
                   onEdit={(t) => router.push(`/transactions?edit=${t.id}`)}
                   onDelete={() => {}}
+                  onDeleteGroup={() => {}}
                   onDuplicate={() => {}}
                   onMarkRecovered={() => {}}
                 />
@@ -305,6 +306,7 @@ export default function DashboardPage() {
                   rank={i}
                   onEdit={() => router.push(`/transactions?edit=${tx.id}`)}
                   onDelete={() => {}}
+                  onDeleteGroup={() => {}}
                   onDuplicate={() => {}}
                   onMarkRecovered={() => {}}
                 />

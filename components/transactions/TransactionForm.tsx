@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { validateTransaction, type FieldError } from '@/lib/validations'
+import { parseInstallment } from '@/lib/installments'
 import type { Transaction, TransactionInsert } from '@/types/transaction'
 import type { VoicePrefill } from '@/lib/voiceParser'
 import type { Category } from '@/types/category'
@@ -20,10 +21,14 @@ function findCategoryId(categories: Category[], name: string | null): string {
   return ''
 }
 
+export interface SubmitOptions {
+  cascadeDates?: boolean
+}
+
 interface TransactionFormProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: TransactionInsert) => Promise<void>
+  onSubmit: (data: TransactionInsert, options?: SubmitOptions) => Promise<void>
   categories: Category[]
   editingTransaction?: Transaction | null
   prefill?: VoicePrefill | null
@@ -57,6 +62,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
   const [status, setStatus]             = useState<'paid' | 'pending' | 'recoverable'>('paid')
   const [notes, setNotes]               = useState('')
   const [installments, setInstallments] = useState(1)
+  const [cascadeDates, setCascadeDates] = useState(false)
   const [errors, setErrors]             = useState<FieldError[]>([])
   const [loading, setLoading]           = useState(false)
 
@@ -71,6 +77,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setStatus(editingTransaction.status as 'paid' | 'pending' | 'recoverable')
         setNotes(editingTransaction.notes ?? '')
         setInstallments(1)
+        setCascadeDates(false)
       } else {
         setDescription(prefill?.description ?? '')
         setValue(prefill?.value ? String(prefill.value) : '')
@@ -98,15 +105,18 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
     try {
       const n = !isEdit && installments > 1 ? installments : 1
       for (let i = 0; i < n; i++) {
-        await onSubmit({
-          description: n > 1 ? `${description.trim()} (${i + 1}/${n})` : description.trim(),
-          value: parseFloat(value),
-          date: addMonths(date, i),
-          category_id: categoryId || null,
-          type,
-          status: type === 'recover' ? 'recoverable' : status,
-          notes: notes.trim() || null,
-        })
+        await onSubmit(
+          {
+            description: n > 1 ? `${description.trim()} (${i + 1}/${n})` : description.trim(),
+            value: parseFloat(value),
+            date: addMonths(date, i),
+            category_id: categoryId || null,
+            type,
+            status: type === 'recover' ? 'recoverable' : status,
+            notes: notes.trim() || null,
+          },
+          isEdit ? { cascadeDates } : undefined,
+        )
       }
       onClose()
     } catch (err: unknown) {
@@ -283,6 +293,40 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
           onChange={(e) => setNotes(e.target.value)}
           maxLength={200}
         />
+
+        {/* Cascade date toggle — only when editing an installment */}
+        {isEdit && editingTransaction && parseInstallment(editingTransaction.description) && (
+          <button
+            type="button"
+            onClick={() => setCascadeDates((v) => !v)}
+            className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-[12px] w-full text-left transition-colors"
+            style={{
+              background: cascadeDates ? 'rgba(230,229,216,0.08)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${cascadeDates ? 'rgba(230,229,216,0.22)' : 'var(--border)'}`,
+            }}
+          >
+            <div>
+              <p className="text-[11px] font-medium" style={{ color: 'var(--text-2)' }}>
+                Mover todas as {parseInstallment(editingTransaction.description)!.total} parcelas
+              </p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                Ajusta as datas de todo o parcelamento proporcionalmente
+              </p>
+            </div>
+            <div
+              className="flex-shrink-0 w-9 h-5 rounded-full relative transition-colors"
+              style={{ background: cascadeDates ? 'var(--accent)' : 'rgba(255,255,255,0.1)' }}
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
+                style={{
+                  background: cascadeDates ? 'var(--accent-text)' : 'rgba(255,255,255,0.4)',
+                  left: cascadeDates ? '17px' : '2px',
+                }}
+              />
+            </div>
+          </button>
+        )}
 
         {fieldError('form') && (
           <p className="text-xs -mt-1" style={{ color: 'var(--red)' }}>{fieldError('form')}</p>

@@ -5,12 +5,14 @@ import { ChevronDown, Edit2, Copy, CheckCircle, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import { parseInstallment } from '@/lib/installments'
 import type { Transaction } from '@/types/transaction'
 
 interface TransactionCardProps {
   transaction: Transaction
   onEdit: (tx: Transaction) => void
   onDelete: (id: string) => void
+  onDeleteGroup: (tx: Transaction) => void
   onDuplicate: (id: string) => void
   onMarkRecovered: (id: string) => void
   rank?: number
@@ -20,17 +22,29 @@ const STATUS_LABELS: Record<string, string> = {
   paid: 'Pago', pending: 'Pendente', recoverable: 'A Recuperar', recovered: 'Recuperado',
 }
 
-export const TransactionCard = memo(function TransactionCard({ transaction: tx, onEdit, onDelete, onDuplicate, onMarkRecovered, rank }: TransactionCardProps) {
+export const TransactionCard = memo(function TransactionCard({
+  transaction: tx, onEdit, onDelete, onDeleteGroup, onDuplicate, onMarkRecovered, rank,
+}: TransactionCardProps) {
   const [open, setOpen] = useState(false)
+  const [deleteMode, setDeleteMode] = useState(false)
 
   const isRecover   = tx.type === 'recover' && tx.status !== 'recovered'
   const isRecovered = tx.status === 'recovered'
   const catColor    = tx.category?.color ?? 'var(--text-3)'
+  const installment = parseInstallment(tx.description)
 
   const cardStyle: React.CSSProperties = {
     background: isRecover ? 'rgba(248,113,113,0.03)' : isRecovered ? 'rgba(62,207,142,0.02)' : 'var(--surface)',
     border: `1px solid ${isRecover ? 'rgba(248,113,113,0.10)' : isRecovered ? 'rgba(62,207,142,0.08)' : 'var(--border)'}`,
     boxShadow: 'var(--shadow-card)',
+  }
+
+  function handleDeleteClick() {
+    if (installment) {
+      setDeleteMode(true)
+    } else {
+      onDelete(tx.id)
+    }
   }
 
   return (
@@ -101,20 +115,54 @@ export const TransactionCard = memo(function TransactionCard({ transaction: tx, 
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button onClick={() => onEdit(tx)} className="action-btn"><Edit2 size={11} /> Editar</button>
-            <button onClick={() => onDuplicate(tx.id)} className="action-btn"><Copy size={11} /> Duplicar</button>
-            {isRecover && (
-              <button onClick={() => onMarkRecovered(tx.id)} className="action-btn"
-                style={{ color: '#3ecf8e', borderColor: 'rgba(62,207,142,0.15)', background: 'rgba(62,207,142,0.05)' }}>
-                <CheckCircle size={11} /> Recuperado
+
+          {deleteMode && installment ? (
+            <div
+              className="flex flex-col gap-2.5 p-3 rounded-[12px]"
+              style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.18)' }}
+            >
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-2)' }}>
+                <span style={{ color: '#f87171', fontWeight: 600 }}>{tx.description}</span> é parte de um parcelamento em {installment.total}x.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  className="action-btn flex-1 justify-center"
+                  onClick={() => { onDelete(tx.id); setDeleteMode(false); setOpen(false) }}
+                >
+                  Só esta parcela
+                </button>
+                <button
+                  className="action-btn flex-1 justify-center"
+                  style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.06)' }}
+                  onClick={() => { onDeleteGroup(tx); setDeleteMode(false); setOpen(false) }}
+                >
+                  Todas as {installment.total}
+                </button>
+              </div>
+              <button
+                onClick={() => setDeleteMode(false)}
+                className="text-[10px] text-center hover:opacity-70 transition-opacity"
+                style={{ color: 'var(--text-3)' }}
+              >
+                Cancelar
               </button>
-            )}
-            <button onClick={() => onDelete(tx.id)} className="action-btn"
-              style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.15)', background: 'rgba(248,113,113,0.04)' }}>
-              <Trash2 size={11} /> Excluir
-            </button>
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => onEdit(tx)} className="action-btn"><Edit2 size={11} /> Editar</button>
+              <button onClick={() => onDuplicate(tx.id)} className="action-btn"><Copy size={11} /> Duplicar</button>
+              {isRecover && (
+                <button onClick={() => onMarkRecovered(tx.id)} className="action-btn"
+                  style={{ color: '#3ecf8e', borderColor: 'rgba(62,207,142,0.15)', background: 'rgba(62,207,142,0.05)' }}>
+                  <CheckCircle size={11} /> Recuperado
+                </button>
+              )}
+              <button onClick={handleDeleteClick} className="action-btn"
+                style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.15)', background: 'rgba(248,113,113,0.04)' }}>
+                <Trash2 size={11} /> Excluir
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
