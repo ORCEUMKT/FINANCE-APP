@@ -182,21 +182,13 @@ export const TransactionCard = memo(function TransactionCard({
 
   return (
     <>
-      {/* Swipe wrapper — carries the card style so the gap on swipe blends with the card bg */}
-      <div ref={wrapperRef} className="relative overflow-hidden rounded-[16px]" style={{ ...cardStyle }}>
+      {/* Outer clip — defines the rounded card border */}
+      <div ref={wrapperRef} className="overflow-hidden rounded-[16px]" style={{ ...cardStyle }}>
+        {/* Sliding flex row: [card content | delete action] — action starts hidden to the right */}
+        <div ref={contentRef} className="flex" style={{ willChange: 'transform' }}>
 
-        {/* Delete action revealed on swipe */}
-        <div
-          className="absolute top-0 right-0 bottom-0 flex flex-col items-center justify-center gap-1"
-          style={{ width: ACTION_W, background: '#ef4444' }}
-        >
-          <Trash2 size={20} color="white" />
-          <span className="text-[9px] font-bold text-white uppercase tracking-wide">Excluir</span>
-          <button className="absolute inset-0" onClick={handleSwipeDelete} aria-label="Excluir lançamento" />
-        </div>
-
-        {/* Sliding card content — no border/shadow (wrapper provides them) */}
-        <div ref={contentRef} className="relative z-[1] rounded-[16px]" style={{ background: cardStyle.background, willChange: 'transform' }}>
+          {/* Card content — takes 100% of clip width */}
+          <div style={{ flex: '0 0 100%', minWidth: 0 }}>
           <button className="w-full text-left" onClick={handleToggle}>
             <div className="flex items-center gap-3 p-4">
               {rank !== undefined && (
@@ -270,8 +262,21 @@ export const TransactionCard = memo(function TransactionCard({
               </div>
             </div>
           )}
-        </div>
-      </div>
+          </div>{/* end card content */}
+
+          {/* Delete action — sibling to the right, revealed on swipe */}
+          <button
+            onClick={handleSwipeDelete}
+            className="flex flex-col items-center justify-center gap-1 flex-shrink-0"
+            style={{ width: ACTION_W, background: '#ef4444' }}
+            aria-label="Excluir lançamento"
+          >
+            <Trash2 size={20} color="white" />
+            <span className="text-[9px] font-bold text-white uppercase tracking-wide">Excluir</span>
+          </button>
+
+        </div>{/* end flex row */}
+      </div>{/* end clip wrapper */}
 
       {deleteDialog && installment && (
         <InstallmentDeleteDialog
