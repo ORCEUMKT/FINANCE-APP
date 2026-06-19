@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react'
 import { TrendingUp } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
-import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
+import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
+import { useSelectedMonth } from '@/contexts/MonthContext'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/lib/formatters'
@@ -72,7 +73,7 @@ function useABC(transactions: ReturnType<typeof useTransactions>['transactions']
 }
 
 export default function ABCPage() {
-  const [selectedMonth, setSelectedMonth] = useState<MonthValue>(currentMonth())
+  const { month: selectedMonth, setMonth: setSelectedMonth } = useSelectedMonth()
   const [activeType, setActiveType] = useState<TxType>('expense')
   const { dateFrom, dateTo } = monthRange(selectedMonth)
 

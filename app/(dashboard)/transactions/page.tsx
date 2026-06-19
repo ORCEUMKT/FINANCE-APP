@@ -8,7 +8,8 @@ import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
-import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
+import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
+import { useSelectedMonth } from '@/contexts/MonthContext'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
@@ -29,14 +30,7 @@ function TransactionsContent() {
   const params = useSearchParams()
   const { toast } = useToast()
 
-  const [selectedMonth, setSelectedMonth] = useState<MonthValue>(() => {
-    const df = params.get('date_from')
-    if (df) {
-      const d = new Date(df + 'T00:00:00')
-      return { year: d.getFullYear(), month: d.getMonth() }
-    }
-    return currentMonth()
-  })
+  const { month: selectedMonth, setMonth: setSelectedMonth } = useSelectedMonth()
   const { dateFrom: mFrom, dateTo: mTo } = monthRange(selectedMonth)
 
   const [search, setSearch]       = useState(params.get('search') ?? '')

@@ -12,7 +12,8 @@ import { DonutChart } from '@/components/dashboard/DonutChart'
 import { BarChart } from '@/components/dashboard/BarChart'
 import { GoalsProgress } from '@/components/dashboard/GoalsProgress'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
-import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
+import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
+import { useSelectedMonth } from '@/contexts/MonthContext'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -26,7 +27,7 @@ const VoiceMicButton = dynamic(() => import('@/components/ui/VoiceMicButton').th
 const TransactionForm = dynamic(() => import('@/components/transactions/TransactionForm').then(m => m.TransactionForm), { ssr: false })
 
 export default function DashboardPage() {
-  const [selectedMonth, setSelectedMonth] = useState<MonthValue>(currentMonth)
+  const { month: selectedMonth, setMonth: setSelectedMonth } = useSelectedMonth()
   const { dateFrom, dateTo } = monthRange(selectedMonth)
   const { metrics, loading, refetch } = useDashboardMetrics(dateFrom, dateTo)
   const { categories } = useCategories()

@@ -5,7 +5,8 @@ import { Target, Edit2, Trash2, Check, X } from 'lucide-react'
 import { useCategories } from '@/hooks/useCategories'
 import { useGoals } from '@/hooks/useGoals'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
-import { MonthPicker, monthRange, currentMonth, type MonthValue } from '@/components/ui/MonthPicker'
+import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
+import { useSelectedMonth } from '@/contexts/MonthContext'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
@@ -17,7 +18,7 @@ const STATUS_COLOR = { ok: 'var(--green)', warning: 'var(--orange)', over: 'var(
 const STATUS_LABEL = { ok: 'Dentro da meta', warning: 'Atenção', over: 'Ultrapassou' } as const
 
 export default function GoalsPage() {
-  const [selectedMonth, setSelectedMonth] = useState<MonthValue>(currentMonth)
+  const { month: selectedMonth, setMonth: setSelectedMonth } = useSelectedMonth()
   const { dateFrom, dateTo } = monthRange(selectedMonth)
   const { categories, loading: catLoading } = useCategories()
   const { goals, loading: goalsLoading, upsert, remove } = useGoals()
