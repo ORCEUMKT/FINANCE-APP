@@ -196,7 +196,7 @@ export const TransactionCard = memo(function TransactionCard({
         </div>
 
         {/* Sliding card content — no border/shadow (wrapper provides them) */}
-        <div ref={contentRef} className="relative z-[1]" style={{ background: cardStyle.background, willChange: 'transform' }}>
+        <div ref={contentRef} className="relative z-[1] rounded-[16px]" style={{ background: cardStyle.background, willChange: 'transform' }}>
           <button className="w-full text-left" onClick={handleToggle}>
             <div className="flex items-center gap-3 p-4">
               {rank !== undefined && (
