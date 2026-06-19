@@ -33,6 +33,7 @@ interface TransactionFormProps {
   categories: Category[]
   editingTransaction?: Transaction | null
   prefill?: VoicePrefill | null
+  prefillFrom?: Transaction | null
 }
 
 function addMonths(dateStr: string, months: number): string {
@@ -126,7 +127,7 @@ function CascadeDateDialog({
   )
 }
 
-export function TransactionForm({ open, onClose, onSubmit, categories, editingTransaction, prefill }: TransactionFormProps) {
+export function TransactionForm({ open, onClose, onSubmit, categories, editingTransaction, prefill, prefillFrom }: TransactionFormProps) {
   const isEdit = !!editingTransaction
 
   const [description, setDescription]   = useState('')
@@ -152,6 +153,15 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setStatus(editingTransaction.status as 'paid' | 'pending' | 'recoverable')
         setNotes(editingTransaction.notes ?? '')
         setInstallments(1)
+      } else if (prefillFrom) {
+        setDescription(prefillFrom.description)
+        setValue(String(prefillFrom.value))
+        setDate(new Date().toISOString().slice(0, 10))
+        setCategoryId(prefillFrom.category_id ?? '')
+        setType(prefillFrom.type as 'expense' | 'income' | 'recover')
+        setStatus(prefillFrom.status as 'paid' | 'pending' | 'recoverable')
+        setNotes(prefillFrom.notes ?? '')
+        setInstallments(1)
       } else {
         setDescription(prefill?.description ?? '')
         setValue(prefill?.value ? String(prefill.value) : '')
@@ -168,7 +178,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
       setErrors([])
       setPendingData(null)
     }
-  }, [open, editingTransaction, categories, prefill])
+  }, [open, editingTransaction, prefillFrom, categories, prefill])
 
   const fieldError = (field: string) => errors.find((e) => e.field === field)?.message
 
@@ -242,7 +252,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
   return (
     <>
-      <Modal open={open} onClose={onClose} title={isEdit ? 'Editar Lançamento' : 'Novo Lançamento'}>
+      <Modal open={open} onClose={onClose} title={isEdit ? 'Editar Lançamento' : prefillFrom ? 'Duplicar Lançamento' : 'Novo Lançamento'}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
           {/* Voice detection banner */}
           {!isEdit && prefill?.rawText && (

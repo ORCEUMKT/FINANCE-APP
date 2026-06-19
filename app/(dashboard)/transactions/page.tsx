@@ -47,7 +47,8 @@ function TransactionsContent() {
   const [showFilters, setShowFilters] = useState(false)
   const [formOpen, setFormOpen]         = useState(() => params.get('new') === '1')
   const [editing, setEditing]           = useState<Transaction | null>(null)
-  const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
+  const [voicePrefill, setVoicePrefill]   = useState<VoicePrefill | null>(null)
+  const [duplicating, setDuplicating]     = useState<Transaction | null>(null)
   const [deletedBuffer, setDeletedBuffer] = useState<Transaction | null>(null)
 
   const filters = {
@@ -108,10 +109,14 @@ function TransactionsContent() {
     toast('Todas as parcelas excluídas!')
   }, [removeGroup, toast])
 
-  const handleDuplicate = useCallback(async (id: string) => {
-    await duplicate(id)
-    toast('Lançamento duplicado!')
-  }, [duplicate, toast])
+  const handleDuplicate = useCallback((id: string) => {
+    const tx = transactions.find((t) => t.id === id)
+    if (!tx) return
+    setDuplicating(tx)
+    setEditing(null)
+    setVoicePrefill(null)
+    setFormOpen(true)
+  }, [transactions])
 
   const handleMarkRecovered = useCallback(async (id: string) => {
     await markRecovered(id)
@@ -245,11 +250,12 @@ function TransactionsContent() {
 
       <TransactionForm
         open={formOpen}
-        onClose={() => { setFormOpen(false); setEditing(null); setVoicePrefill(null) }}
+        onClose={() => { setFormOpen(false); setEditing(null); setVoicePrefill(null); setDuplicating(null) }}
         onSubmit={handleSubmit}
         categories={categories}
         editingTransaction={editing}
         prefill={voicePrefill}
+        prefillFrom={duplicating}
       />
     </div>
   )
