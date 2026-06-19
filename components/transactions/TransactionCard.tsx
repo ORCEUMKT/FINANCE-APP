@@ -261,10 +261,12 @@ export const TransactionCard = memo(function TransactionCard({
                     <CheckCircle size={11} /> Recuperado
                   </button>
                 )}
-                <button onClick={handleDeleteClick} className="action-btn hidden lg:flex"
-                  style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.15)', background: 'rgba(248,113,113,0.04)' }}>
-                  <Trash2 size={11} /> Excluir
-                </button>
+                <div className="hidden lg:flex">
+                  <button onClick={handleDeleteClick} className="action-btn"
+                    style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.15)', background: 'rgba(248,113,113,0.04)' }}>
+                    <Trash2 size={11} /> Excluir
+                  </button>
+                </div>
               </div>
             </div>
           )}
