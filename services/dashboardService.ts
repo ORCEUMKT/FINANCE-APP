@@ -10,6 +10,7 @@ export interface DashboardMetrics {
   expenseCount: number
   incomeCount: number
   categoryRanking: CategoryRankItem[]
+  expenseCategoryRanking: CategoryRankItem[]
   dailyTotals: DailyTotal[]
   topTransactions: Transaction[]
   biggestCategory: CategoryRankItem | null
@@ -89,6 +90,25 @@ export async function getDashboardMetrics(
     }))
     .sort((a, b) => b.total - a.total)
 
+  // Expense-only category ranking (for DonutChart)
+  const expCatMap = new Map<string, { name: string; color: string; total: number; count: number; id: string | null }>()
+  expenses.forEach((t) => {
+    const key = t.category_id ?? '__none__'
+    const existing = expCatMap.get(key)
+    if (existing) { existing.total += t.value; existing.count += 1 }
+    else expCatMap.set(key, { id: t.category_id, name: t.category?.name ?? 'Sem categoria', color: t.category?.color ?? '#666', total: t.value, count: 1 })
+  })
+  const expenseCategoryRanking: CategoryRankItem[] = Array.from(expCatMap.values())
+    .map((v) => ({
+      category_id: v.id,
+      category_name: v.name,
+      category_color: v.color,
+      total: v.total,
+      count: v.count,
+      percentage: totalExpenses > 0 ? (v.total / totalExpenses) * 100 : 0,
+    }))
+    .sort((a, b) => b.total - a.total)
+
   // Daily totals
   const dayMap = new Map<string, { total: number; count: number }>()
   txs.forEach((t) => {
@@ -115,6 +135,7 @@ export async function getDashboardMetrics(
     expenseCount: expenses.length,
     incomeCount: income.length,
     categoryRanking,
+    expenseCategoryRanking,
     dailyTotals,
     topTransactions,
     biggestCategory: categoryRanking[0] ?? null,

@@ -137,8 +137,8 @@ export default function DashboardPage() {
             Composição
           </p>
           <DonutChart
-            data={metrics.categoryRanking}
-            total={chartTotal}
+            data={metrics.expenseCategoryRanking}
+            total={metrics.totalExpenses}
             onCategoryClick={(catId) => { if (catId) router.push(`/transactions?category=${catId}`) }}
           />
         </Card>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
             <GoalsProgress
               goals={goals}
               categories={categories}
-              categoryRanking={metrics.categoryRanking}
+              categoryRanking={metrics.expenseCategoryRanking}
               onCategoryClick={(catId) => router.push(`/transactions?category=${catId}`)}
             />
           </Card>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
             onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)}
           />
           <div className="mt-6 flex flex-col gap-2.5">
-            {metrics.categoryRanking.slice(0, 5).map((item, i) => (
+            {metrics.expenseCategoryRanking.slice(0, 5).map((item, i) => (
               <button
                 key={item.category_name}
                 onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)}
@@ -246,8 +246,8 @@ export default function DashboardPage() {
               Composição
             </p>
             <DonutChart
-              data={metrics.categoryRanking}
-              total={chartTotal}
+              data={metrics.expenseCategoryRanking}
+              total={metrics.totalExpenses}
               onCategoryClick={(catId) => { if (catId) router.push(`/transactions?category=${catId}`) }}
             />
           </Card>
@@ -261,7 +261,7 @@ export default function DashboardPage() {
               onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)}
             />
             <div className="mt-6 flex flex-col gap-2.5">
-              {metrics.categoryRanking.slice(0, 5).map((item, i) => (
+              {metrics.expenseCategoryRanking.slice(0, 5).map((item, i) => (
                 <button
                   key={item.category_name}
                   onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)}
@@ -285,7 +285,7 @@ export default function DashboardPage() {
               <GoalsProgress
                 goals={goals}
                 categories={categories}
-                categoryRanking={metrics.categoryRanking}
+                categoryRanking={metrics.expenseCategoryRanking}
                 onCategoryClick={(catId) => router.push(`/transactions?category=${catId}`)}
               />
             </Card>
