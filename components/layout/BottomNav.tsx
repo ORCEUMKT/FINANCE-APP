@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ArrowLeftRight, Tag, Target, TrendingUp, Settings } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, Tag, Target, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -10,7 +10,6 @@ const NAV = [
   { href: '/transactions', label: 'Extrato', icon: ArrowLeftRight },
   { href: '/categories',   label: 'Cats.',   icon: Tag },
   { href: '/goals',        label: 'Metas',   icon: Target },
-  { href: '/abc',          label: 'ABC',     icon: TrendingUp },
   { href: '/settings',     label: 'Config',  icon: Settings },
 ]
 
@@ -30,8 +29,8 @@ export function BottomNav() {
             className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors duration-150"
             style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
           >
-            <Icon size={17} />
-            <span className="text-[8px] font-semibold uppercase tracking-wider">{label}</span>
+            <Icon size={18} />
+            <span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span>
           </Link>
         )
       })}

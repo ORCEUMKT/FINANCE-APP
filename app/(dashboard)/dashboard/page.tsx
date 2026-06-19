@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus } from 'lucide-react'
+import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus, BarChart2 } from 'lucide-react'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import { useCategories } from '@/hooks/useCategories'
 import { useGoals } from '@/hooks/useGoals'
@@ -14,6 +14,7 @@ import { GoalsProgress } from '@/components/dashboard/GoalsProgress'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
+import { ABCSection } from '@/components/dashboard/ABCSection'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -37,6 +38,7 @@ export default function DashboardPage() {
 
   const [formOpen, setFormOpen]         = useState(false)
   const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
+  const [activeTab, setActiveTab]       = useState<'overview' | 'abc'>('overview')
 
   function openForm(prefill?: VoicePrefill) {
     setVoicePrefill(prefill ?? null)
@@ -48,6 +50,24 @@ export default function DashboardPage() {
     toast('Lançamento adicionado!')
     await refetch()
   }
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: '7px 0',
+    borderRadius: '10px',
+    fontSize: '12px',
+    fontWeight: 600,
+    border: active ? '1px solid var(--accent)' : '1px solid transparent',
+    background: active ? 'var(--accent)' : 'transparent',
+    color: active ? 'var(--accent-text)' : 'var(--text-3)',
+    cursor: 'pointer',
+    transition: 'all .15s',
+    fontFamily: 'inherit',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+  })
 
   const chartTotal = useMemo(
     () => (metrics?.totalExpenses ?? 0) + (metrics?.totalIncome ?? 0) + (metrics?.totalRecover ?? 0),
@@ -92,6 +112,18 @@ export default function DashboardPage() {
           </div>
           <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
         </div>
+
+        {/* Tab toggle */}
+        <div className="flex gap-1 p-1 rounded-[14px]" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <button onClick={() => setActiveTab('overview')} style={tabStyle(activeTab === 'overview')}>
+            <Activity size={12} /> Visão Geral
+          </button>
+          <button onClick={() => setActiveTab('abc')} style={tabStyle(activeTab === 'abc')}>
+            <BarChart2 size={12} /> Curva ABC
+          </button>
+        </div>
+
+        {activeTab === 'abc' ? <ABCSection /> : <>
 
         {/* Saldo Líquido — solto, sem Card (estilo banco) */}
         <div className="px-1 py-2">
@@ -209,6 +241,7 @@ export default function DashboardPage() {
             <EmptyState icon={Activity} title="Sem lançamentos" description="Adicione seu primeiro lançamento no Extrato" />
           )}
         </div>
+        </>}
       </div>
 
       {/* ═══════════════════════════════════════
@@ -229,6 +262,18 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        {/* Tab toggle */}
+        <div className="flex gap-1 p-1 rounded-[14px] w-fit" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <button onClick={() => setActiveTab('overview')} style={{ ...tabStyle(activeTab === 'overview'), flex: 'none', padding: '7px 20px' }}>
+            <Activity size={12} /> Visão Geral
+          </button>
+          <button onClick={() => setActiveTab('abc')} style={{ ...tabStyle(activeTab === 'abc'), flex: 'none', padding: '7px 20px' }}>
+            <BarChart2 size={12} /> Curva ABC
+          </button>
+        </div>
+
+        {activeTab === 'abc' ? <ABCSection /> : <>
 
         {/* 4-card metric grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -321,6 +366,7 @@ export default function DashboardPage() {
             />
           )}
         </div>
+        </>}
       </div>
 
       {/* TransactionForm (mobile quick-add) */}
