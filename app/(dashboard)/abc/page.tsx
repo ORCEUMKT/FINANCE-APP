@@ -179,11 +179,11 @@ export default function ABCPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-5 flex-wrap">
+            <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-5">
               {(['A', 'B', 'C'] as ABCClass[]).map((cls) => (
                 <div key={cls} className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CLASS_COLOR[cls] }} />
-                  <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                  <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-3)' }}>
                     Classe {cls} · {CLASS_LABEL[cls]}
                   </span>
                 </div>
@@ -192,29 +192,30 @@ export default function ABCPage() {
           </Card>
 
           {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {(['A', 'B', 'C'] as ABCClass[]).map((cls) => (
-              <Card key={cls} className="p-4 flex flex-col gap-2.5">
-                <div className="flex items-start justify-between gap-1">
+              <Card key={cls} className="p-3 flex flex-col gap-2">
+                {/* Letter badge */}
+                <div className="flex items-center gap-1.5">
                   <span
-                    className="text-[11px] font-bold px-2 py-0.5 rounded-[6px]"
+                    className="w-6 h-6 flex items-center justify-center rounded-[6px] text-[11px] font-bold flex-shrink-0"
                     style={{
                       background: CLASS_BG[cls],
                       border: `1px solid ${CLASS_BORDER[cls]}`,
                       color: CLASS_COLOR[cls],
                     }}
                   >
+                    {cls}
+                  </span>
+                  <span className="text-[10px] font-semibold whitespace-nowrap" style={{ color: CLASS_COLOR[cls] }}>
                     Classe {cls}
                   </span>
-                  <span className="text-[10px] tabular" style={{ color: 'var(--text-3)' }}>
-                    {summary[cls].count} {summary[cls].count === 1 ? 'cat.' : 'cats.'}
-                  </span>
                 </div>
-                <p className="text-[15px] font-bold tabular" style={{ color: 'var(--text-1)' }}>
+                <p className="text-[13px] font-bold tabular leading-tight" style={{ color: 'var(--text-1)' }}>
                   {formatCurrency(summary[cls].total)}
                 </p>
-                <p className="text-[10px] leading-tight" style={{ color: 'var(--text-3)' }}>
-                  {CLASS_DESC[cls]}
+                <p className="text-[10px] tabular" style={{ color: 'var(--text-3)' }}>
+                  {summary[cls].count} {summary[cls].count === 1 ? 'categoria' : 'categorias'}
                 </p>
               </Card>
             ))}
