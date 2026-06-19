@@ -182,8 +182,8 @@ export const TransactionCard = memo(function TransactionCard({
 
   return (
     <>
-      {/* Swipe wrapper */}
-      <div ref={wrapperRef} className="relative overflow-hidden rounded-[16px]">
+      {/* Swipe wrapper — carries the card style so the gap on swipe blends with the card bg */}
+      <div ref={wrapperRef} className="relative overflow-hidden rounded-[16px]" style={{ ...cardStyle }}>
 
         {/* Delete action revealed on swipe */}
         <div
@@ -192,16 +192,11 @@ export const TransactionCard = memo(function TransactionCard({
         >
           <Trash2 size={20} color="white" />
           <span className="text-[9px] font-bold text-white uppercase tracking-wide">Excluir</span>
-          {/* Invisible tap target over the full area */}
-          <button
-            className="absolute inset-0"
-            onClick={handleSwipeDelete}
-            aria-label="Excluir lançamento"
-          />
+          <button className="absolute inset-0" onClick={handleSwipeDelete} aria-label="Excluir lançamento" />
         </div>
 
-        {/* Sliding card content */}
-        <div ref={contentRef} className="relative z-[1] rounded-[16px]" style={{ ...cardStyle, willChange: 'transform' }}>
+        {/* Sliding card content — no border/shadow (wrapper provides them) */}
+        <div ref={contentRef} className="relative z-[1]" style={{ background: cardStyle.background, willChange: 'transform' }}>
           <button className="w-full text-left" onClick={handleToggle}>
             <div className="flex items-center gap-3 p-4">
               {rank !== undefined && (
@@ -266,7 +261,7 @@ export const TransactionCard = memo(function TransactionCard({
                     <CheckCircle size={11} /> Recuperado
                   </button>
                 )}
-                <button onClick={handleDeleteClick} className="action-btn"
+                <button onClick={handleDeleteClick} className="action-btn hidden lg:flex"
                   style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.15)', background: 'rgba(248,113,113,0.04)' }}>
                   <Trash2 size={11} /> Excluir
                 </button>
