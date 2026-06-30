@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { signUp } from '@/services/authService'
+import { seedDefaultCategories } from '@/services/categoriesService'
 import { validateEmail, validatePassword } from '@/lib/validations'
 
 export default function RegisterPage() {
@@ -28,6 +29,7 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await signUp(email, password, name)
+      await seedDefaultCategories()
       router.push('/dashboard')
       router.refresh()
     } catch (err: unknown) {
