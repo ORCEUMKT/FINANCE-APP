@@ -193,50 +193,44 @@ function TransactionsContent() {
         </div>
 
         {showFilters && (
-          <div className="flex flex-col gap-3 p-4 bg-white/[.03] border border-white/[.07] rounded-2xl">
-            {/* Row 1: all controls in a flex line on desktop, stacked on mobile */}
-            <div className="flex flex-col sm:flex-row gap-3">
+          <div className="p-4 bg-white/[.03] border border-white/[.07] rounded-2xl flex flex-col gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
-              {/* Categoria */}
-              <div className="flex flex-col gap-1 sm:flex-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] uppercase tracking-widest text-white/30">Categoria</label>
                 <select
                   value={catFilter}
                   onChange={(e) => setCatFilter(e.target.value)}
-                  className="bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none"
+                  className="h-10 bg-white/[.05] border border-white/[.09] rounded-xl px-3 text-sm text-white outline-none"
                 >
                   <option value="">Todas</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
 
-              {/* De + Até lado a lado */}
-              <div className="flex gap-2 sm:w-64">
-                <div className="flex flex-col gap-1 flex-1">
-                  <label className="text-[10px] uppercase tracking-widest text-white/30">De</label>
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
-                </div>
-                <div className="flex flex-col gap-1 flex-1">
-                  <label className="text-[10px] uppercase tracking-widest text-white/30">Até</label>
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-widest text-white/30">De</label>
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                  className="h-10 bg-white/[.05] border border-white/[.09] rounded-xl px-3 text-sm text-white outline-none" />
               </div>
 
-              {/* Ordenar por */}
-              <div className="flex flex-col gap-1 sm:w-36">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-widest text-white/30">Até</label>
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                  className="h-10 bg-white/[.05] border border-white/[.09] rounded-xl px-3 text-sm text-white outline-none" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] uppercase tracking-widest text-white/30">Ordenar por</label>
-                <div className="flex gap-1.5 h-[42px]">
+                <div className="flex h-10 rounded-xl overflow-hidden border border-white/[.09]">
                   {(['date', 'value'] as const).map((opt) => (
                     <button
                       key={opt}
                       onClick={() => setSortBy(opt)}
-                      className="flex-1 rounded-xl text-[11px] font-semibold transition-all"
+                      className="flex-1 text-[11px] font-semibold transition-all"
                       style={{
-                        background: sortBy === opt ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${sortBy === opt ? 'var(--accent)' : 'rgba(255,255,255,0.09)'}`,
-                        color: sortBy === opt ? 'var(--accent-text)' : 'rgba(255,255,255,0.5)',
+                        background: sortBy === opt ? 'var(--accent)' : 'transparent',
+                        color: sortBy === opt ? 'var(--accent-text)' : 'rgba(255,255,255,0.4)',
                       }}
                     >
                       {opt === 'date' ? 'Data' : 'Valor'}
@@ -246,7 +240,6 @@ function TransactionsContent() {
               </div>
             </div>
 
-            {/* Limpar */}
             <button onClick={clearFilters} className="self-start text-xs text-white/40 hover:text-white transition-colors flex items-center gap-1.5">
               <X size={11} /> Limpar filtros
             </button>
