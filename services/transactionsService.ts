@@ -10,11 +10,16 @@ import type {
 export async function getTransactions(filters?: TransactionFilters): Promise<Transaction[]> {
   const supabase = createClient()
 
+  const byValue = filters?.sort_by === 'value'
   let query = supabase
     .from('transactions')
     .select('*, category:categories(*)')
-    .order('date', { ascending: false })
-    .order('created_at', { ascending: false })
+
+  if (byValue) {
+    query = query.order('value', { ascending: false })
+  } else {
+    query = query.order('date', { ascending: false }).order('created_at', { ascending: false })
+  }
 
   if (filters?.search) {
     query = query.ilike('description', `%${filters.search}%`)

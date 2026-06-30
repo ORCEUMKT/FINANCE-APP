@@ -39,4 +39,5 @@ export interface TransactionFilters {
   status?: TransactionStatus | null
   date_from?: string | null
   date_to?: string | null
+  sort_by?: 'date' | 'value'
 }

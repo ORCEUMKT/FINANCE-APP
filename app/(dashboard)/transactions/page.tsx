@@ -37,6 +37,8 @@ function TransactionsContent() {
   const [catFilter, setCatFilter] = useState(params.get('category') ?? '')
   const [dateFrom, setDateFrom]   = useState(params.get('date_from') ?? mFrom)
   const [dateTo, setDateTo]       = useState(params.get('date_to') ?? mTo)
+  // Default to value sort when coming from a category click
+  const [sortBy, setSortBy]       = useState<'date' | 'value'>(() => params.get('category') ? 'value' : 'date')
 
   function applyMonth(v: MonthValue) {
     setSelectedMonth(v)
@@ -56,6 +58,7 @@ function TransactionsContent() {
     category_id: catFilter || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
+    sort_by: sortBy,
   }
 
   const { transactions, loading, refetch, add, update, remove, duplicate, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
@@ -126,6 +129,7 @@ function TransactionsContent() {
   function clearFilters() {
     setSearch('')
     setCatFilter('')
+    setSortBy('date')
     const { dateFrom: f, dateTo: t } = monthRange(selectedMonth)
     setDateFrom(f)
     setDateTo(t)
@@ -210,6 +214,33 @@ function TransactionsContent() {
               <label className="text-[10px] uppercase tracking-widest text-white/30">Até</label>
               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
                 className="bg-white/[.05] border border-white/[.09] rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-widest text-white/30">Ordenar por</label>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setSortBy('date')}
+                  className="flex-1 py-2.5 rounded-xl text-[11px] font-semibold transition-all"
+                  style={{
+                    background: sortBy === 'date' ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${sortBy === 'date' ? 'var(--accent)' : 'rgba(255,255,255,0.09)'}`,
+                    color: sortBy === 'date' ? 'var(--accent-text)' : 'rgba(255,255,255,0.5)',
+                  }}
+                >
+                  Data
+                </button>
+                <button
+                  onClick={() => setSortBy('value')}
+                  className="flex-1 py-2.5 rounded-xl text-[11px] font-semibold transition-all"
+                  style={{
+                    background: sortBy === 'value' ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${sortBy === 'value' ? 'var(--accent)' : 'rgba(255,255,255,0.09)'}`,
+                    color: sortBy === 'value' ? 'var(--accent-text)' : 'rgba(255,255,255,0.5)',
+                  }}
+                >
+                  Valor
+                </button>
+              </div>
             </div>
             <div className="flex items-end">
               <button onClick={clearFilters} className="text-xs text-white/40 hover:text-white transition-colors flex items-center gap-1.5">
