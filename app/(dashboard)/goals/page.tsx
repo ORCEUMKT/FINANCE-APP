@@ -32,6 +32,17 @@ export default function GoalsPage() {
   const loading = catLoading || goalsLoading || metricsLoading
   const relevant = categories.filter((c) => c.type !== 'income')
 
+  // Totals — only for categories that have a goal defined
+  const totalBudget = goals.reduce((s, g) => s + g.amount, 0)
+  const totalSpent  = goals.reduce((s, g) => {
+    const rank = metrics?.categoryRanking.find((r) => r.category_id === g.category_id)
+    return s + (rank?.total ?? 0)
+  }, 0)
+  const totalPct       = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0
+  const totalRemaining = totalBudget - totalSpent
+  const totalStatus: 'ok' | 'warning' | 'over' =
+    totalSpent > totalBudget ? 'over' : (totalSpent / totalBudget) >= 0.8 ? 'warning' : 'ok'
+
   function startEdit(cat: Category, goal?: CategoryGoal) {
     setEditingId(cat.id)
     setDraft(goal ? String(goal.amount) : '')
@@ -83,6 +94,55 @@ export default function GoalsPage() {
       ) : relevant.length === 0 ? (
         <EmptyState icon={Target} title="Sem categorias" description="Crie categorias de despesa para definir metas" />
       ) : (
+        <>
+        {/* Summary card — only shown when at least one goal is set */}
+        {goals.length > 0 && (
+          <Card className="p-4 flex flex-col gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>
+              Resumo geral · {goals.length} {goals.length === 1 ? 'meta' : 'metas'}
+            </p>
+
+            {/* Progress bar */}
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${totalPct}%`, background: STATUS_COLOR[totalStatus] }}
+              />
+            </div>
+
+            {/* Numbers */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-[1.5px]" style={{ color: 'var(--text-3)' }}>Orçamento</span>
+                <span className="text-[14px] font-bold tabular" style={{ color: 'var(--text-1)' }}>
+                  {formatCurrency(totalBudget)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-[1.5px]" style={{ color: 'var(--text-3)' }}>Gasto</span>
+                <span className="text-[14px] font-bold tabular" style={{ color: STATUS_COLOR[totalStatus] }}>
+                  {formatCurrency(totalSpent)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-[1.5px]" style={{ color: 'var(--text-3)' }}>
+                  {totalRemaining >= 0 ? 'Restante' : 'Excesso'}
+                </span>
+                <span className="text-[14px] font-bold tabular" style={{ color: totalRemaining >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                  {formatCurrency(Math.abs(totalRemaining))}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span style={{ color: 'var(--text-3)' }}>{totalPct.toFixed(0)}% do orçamento utilizado</span>
+              <span className="font-semibold" style={{ color: STATUS_COLOR[totalStatus] }}>
+                {STATUS_LABEL[totalStatus]}
+              </span>
+            </div>
+          </Card>
+        )}
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {relevant.map((cat) => {
             const goal = goals.find((g) => g.category_id === cat.id)
@@ -182,6 +242,7 @@ export default function GoalsPage() {
             )
           })}
         </div>
+        </>
       )}
     </div>
   )
