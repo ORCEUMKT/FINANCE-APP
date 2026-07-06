@@ -44,7 +44,7 @@ export default function DashboardPage() {
     setUnifiedMode, setFilterUserId,
   } = useSharedAccount()
 
-  const { metrics: unifiedMetrics, loading: unifiedLoading, refetch: unifiedRefetch } = useUnifiedDashboardMetrics(
+  const { metrics: unifiedMetrics, loading: unifiedLoading, refetch: unifiedRefetch, error: unifiedError } = useUnifiedDashboardMetrics(
     unifiedMode ? (sharedAccount?.id ?? null) : null,
     filterUserId,
     dateFrom,
@@ -116,13 +116,23 @@ export default function DashboardPage() {
   void chartTotal
   const balanceColor = (metrics?.liquidTotal ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'
 
-  if (loading || !metrics) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div
           className="w-5 h-5 border-2 rounded-full animate-spin"
           style={{ borderColor: 'var(--border-strong)', borderTopColor: 'var(--accent)' }}
         />
+      </div>
+    )
+  }
+
+  if (!metrics) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+          {unifiedError ?? 'Erro ao carregar métricas.'}
+        </p>
       </div>
     )
   }
