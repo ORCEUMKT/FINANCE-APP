@@ -24,15 +24,24 @@ export async function getMySharedAccount(): Promise<SharedAccount | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data } = await supabase
+  // Step 1: get membership row
+  const { data: membership } = await supabase
     .from('shared_account_members')
-    .select('shared_account_id, shared_accounts(*)')
+    .select('shared_account_id')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .maybeSingle()
 
-  if (!data) return null
-  return (data as unknown as { shared_accounts: SharedAccount }).shared_accounts ?? null
+  if (!membership) return null
+
+  // Step 2: fetch account separately (avoids embedded join issues with complex RLS)
+  const { data: account } = await supabase
+    .from('shared_accounts')
+    .select('*')
+    .eq('id', (membership as unknown as { shared_account_id: string }).shared_account_id)
+    .maybeSingle()
+
+  return (account as SharedAccount) ?? null
 }
 
 export async function createSharedAccount(name = 'Conta Compartilhada'): Promise<SharedAccount> {
