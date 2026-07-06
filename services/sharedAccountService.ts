@@ -24,12 +24,14 @@ export async function getMySharedAccount(): Promise<SharedAccount | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Step 1: get membership row
+  // Step 1: get most recent active membership (limit 1 to avoid crash if multiple exist)
   const { data: membership } = await supabase
     .from('shared_account_members')
     .select('shared_account_id')
     .eq('user_id', user.id)
     .eq('status', 'active')
+    .order('joined_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (!membership) return null
