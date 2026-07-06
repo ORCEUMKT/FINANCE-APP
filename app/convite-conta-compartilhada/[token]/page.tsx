@@ -169,7 +169,7 @@ export default function InvitePage() {
                 <h1 className="text-lg font-bold text-white mb-1">Unificar contas financeiras?</h1>
                 <p className="text-sm text-white/50 leading-relaxed">
                   <span className="text-white/80 font-semibold">{inviterName}</span> convidou você para conectar sua conta à{' '}
-                  <span className="text-white/80">{pageData?.account.name ?? 'Conta Compartilhada'}</span>.
+                  <span className="text-white/80">{pageData?.account?.name ?? 'Conta Compartilhada'}</span>.
                 </p>
               </div>
             </div>
