@@ -74,16 +74,25 @@ export async function getSharedAccountMembers(sharedAccountId: string): Promise<
   const supabase = db()
   const { data, error } = await supabase
     .from('shared_account_members')
-    .select('*, profiles(name)')
+    .select('*')
     .eq('shared_account_id', sharedAccountId)
     .eq('status', 'active')
   if (error) throw error
 
-  return (data ?? []).map((row: Record<string, unknown>) => ({
-    ...(row as unknown as SharedAccountMember),
-    name: (row.profiles as { name: string | null } | null)?.name ?? null,
-    email: null,
-  }))
+  const rows = (data ?? []) as unknown as SharedAccountMember[]
+
+  // No direct FK from shared_account_members to profiles — fetch separately
+  const userIds = rows.map((r) => r.user_id)
+  const nameMap = new Map<string, string | null>()
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', userIds)
+    ;(profiles ?? []).forEach((p: { id: string; name: string | null }) => nameMap.set(p.id, p.name))
+  }
+
+  return rows.map((r) => ({ ...r, name: nameMap.get(r.user_id) ?? null, email: null }))
 }
 
 // ─── Invites ─────────────────────────────────────────────────────────────────
