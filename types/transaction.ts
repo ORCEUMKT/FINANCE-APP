@@ -17,6 +17,7 @@ export interface Transaction {
   created_at: string
   updated_at: string
   category?: Category | null
+  owner_name?: string | null
 }
 
 export type TransactionInsert = {

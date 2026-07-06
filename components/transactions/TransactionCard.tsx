@@ -205,7 +205,10 @@ export const TransactionCard = memo(function TransactionCard({
 
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium truncate" style={{ color: 'var(--text-1)' }}>{tx.description}</div>
-                <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{tx.category?.name ?? 'Sem categoria'}</div>
+                <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>
+                  {tx.owner_name && <span style={{ color: 'rgba(78,204,163,0.7)' }}>{tx.owner_name} · </span>}
+                  {tx.category?.name ?? 'Sem categoria'}
+                </div>
               </div>
 
               <div className="text-right flex-shrink-0 ml-2">

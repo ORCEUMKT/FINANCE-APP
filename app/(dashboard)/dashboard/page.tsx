@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus, BarChart2 } from 'lucide-react'
+import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus, BarChart2, Users } from 'lucide-react'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
+import { useUnifiedDashboardMetrics } from '@/hooks/useUnifiedDashboardMetrics'
 import { useCategories } from '@/hooks/useCategories'
 import { useGoals } from '@/hooks/useGoals'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -14,6 +15,7 @@ import { GoalsProgress } from '@/components/dashboard/GoalsProgress'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
+import { useSharedAccount } from '@/contexts/SharedAccountContext'
 import { ABCSection } from '@/components/dashboard/ABCSection'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -30,11 +32,28 @@ const TransactionForm = dynamic(() => import('@/components/transactions/Transact
 export default function DashboardPage() {
   const { month: selectedMonth, setMonth: setSelectedMonth } = useSelectedMonth()
   const { dateFrom, dateTo } = monthRange(selectedMonth)
-  const { metrics, loading, refetch } = useDashboardMetrics(dateFrom, dateTo)
+  const { metrics: personalMetrics, loading: personalLoading, refetch: personalRefetch } = useDashboardMetrics(dateFrom, dateTo)
   const { categories } = useCategories()
   const { goals } = useGoals()
   const { toast } = useToast()
   const router = useRouter()
+
+  const {
+    sharedAccount, members,
+    unifiedMode, filterUserId,
+    setUnifiedMode, setFilterUserId,
+  } = useSharedAccount()
+
+  const { metrics: unifiedMetrics, loading: unifiedLoading, refetch: unifiedRefetch } = useUnifiedDashboardMetrics(
+    unifiedMode ? (sharedAccount?.id ?? null) : null,
+    filterUserId,
+    dateFrom,
+    dateTo
+  )
+
+  const metrics  = unifiedMode ? unifiedMetrics  : personalMetrics
+  const loading  = unifiedMode ? unifiedLoading  : personalLoading
+  const refetch  = unifiedMode ? unifiedRefetch  : personalRefetch
 
   const [formOpen, setFormOpen]         = useState(false)
   const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
@@ -69,10 +88,32 @@ export default function DashboardPage() {
     gap: '6px',
   })
 
+  // Account view selector options (only when shared account with ≥2 members)
+  const viewOptions = useMemo(() => {
+    if (!sharedAccount || members.length < 2) return null
+    const opts = [
+      { key: 'personal', label: 'Minha conta', userId: null, unified: false },
+      { key: 'all', label: 'Conta unificada', userId: null, unified: true },
+      ...members.map((m) => ({ key: m.user_id, label: m.name || 'Membro', userId: m.user_id, unified: true })),
+    ]
+    return opts
+  }, [sharedAccount, members])
+
+  const activeViewKey = !unifiedMode
+    ? 'personal'
+    : filterUserId ?? 'all'
+
+  function selectView(key: string) {
+    if (key === 'personal') { setUnifiedMode(false); return }
+    setUnifiedMode(true)
+    setFilterUserId(key === 'all' ? null : key)
+  }
+
   const chartTotal = useMemo(
     () => (metrics?.totalExpenses ?? 0) + (metrics?.totalIncome ?? 0) + (metrics?.totalRecover ?? 0),
     [metrics?.totalExpenses, metrics?.totalIncome, metrics?.totalRecover]
   )
+  void chartTotal
   const balanceColor = (metrics?.liquidTotal ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'
 
   if (loading) {
@@ -87,6 +128,27 @@ export default function DashboardPage() {
   }
 
   if (!metrics) return null
+
+  // Account selector pill row
+  const AccountSelector = viewOptions ? (
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-shrink-0">
+      <Users size={12} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+      {viewOptions.map((opt) => (
+        <button
+          key={opt.key}
+          onClick={() => selectView(opt.key)}
+          className="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition-all"
+          style={{
+            background: activeViewKey === opt.key ? 'var(--accent)' : 'var(--surface)',
+            color: activeViewKey === opt.key ? 'var(--accent-text)' : 'var(--text-3)',
+            border: `1px solid ${activeViewKey === opt.key ? 'var(--accent)' : 'var(--border)'}`,
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  ) : null
 
   return (
     <>
@@ -113,6 +175,9 @@ export default function DashboardPage() {
           <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
         </div>
 
+        {/* Account selector */}
+        {AccountSelector}
+
         {/* Tab toggle */}
         <div className="flex gap-1 p-1 rounded-[14px]" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <button onClick={() => setActiveTab('overview')} style={tabStyle(activeTab === 'overview')}>
@@ -125,20 +190,14 @@ export default function DashboardPage() {
 
         {activeTab === 'abc' ? <ABCSection /> : <>
 
-        {/* Saldo Líquido — solto, sem Card (estilo banco) */}
+        {/* Saldo Líquido */}
         <div className="px-1 py-2">
-          <div
-            className="inline-flex items-center px-3 py-1 rounded-full mb-3"
-            style={{ border: '1px solid var(--border-md)' }}
-          >
+          <div className="inline-flex items-center px-3 py-1 rounded-full mb-3" style={{ border: '1px solid var(--border-md)' }}>
             <p className="text-[9px] font-semibold uppercase tracking-[2.5px]" style={{ color: 'var(--text-3)' }}>
-              Saldo Líquido
+              {unifiedMode ? 'Saldo Unificado' : 'Saldo Líquido'}
             </p>
           </div>
-          <div
-            className="text-[40px] font-bold leading-none tabular"
-            style={{ color: balanceColor, letterSpacing: '-0.03em' }}
-          >
+          <div className="text-[40px] font-bold leading-none tabular" style={{ color: balanceColor, letterSpacing: '-0.03em' }}>
             {formatCurrency(metrics.liquidTotal)}
           </div>
           <p className="text-[13px] font-semibold mt-2" style={{ color: balanceColor }}>
@@ -146,7 +205,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Despesas + Receitas em cards */}
+        {/* Despesas + Receitas */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-4">
             <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-3)' }}>Despesas</p>
@@ -164,11 +223,9 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Composição — tamanho normal, clicável */}
+        {/* Composição */}
         <Card className="p-5">
-          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
-            Composição
-          </p>
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>Composição</p>
           <DonutChart
             data={metrics.expenseCategoryRanking}
             total={metrics.totalExpenses}
@@ -176,12 +233,17 @@ export default function DashboardPage() {
           />
         </Card>
 
-        {/* Metas por categoria */}
+        {/* Metas */}
         {goals.length > 0 && (
           <Card className="p-5">
-            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
-              Metas
-            </p>
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-[9px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>Metas</p>
+              {unifiedMode && (
+                <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--text-3)' }}>
+                  Metas pessoais
+                </span>
+              )}
+            </div>
             <GoalsProgress
               goals={goals}
               categories={categories}
@@ -193,20 +255,11 @@ export default function DashboardPage() {
 
         {/* Gastos por dia */}
         <Card className="p-5">
-          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
-            Gastos por dia
-          </p>
-          <BarChart
-            data={metrics.dailyTotals}
-            onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)}
-          />
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>Gastos por dia</p>
+          <BarChart data={metrics.dailyTotals} onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)} />
           <div className="mt-6 flex flex-col gap-2.5">
             {metrics.expenseCategoryRanking.slice(0, 5).map((item, i) => (
-              <button
-                key={item.category_name}
-                onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)}
-                className="flex items-center gap-3 text-left transition-opacity hover:opacity-70"
-              >
+              <button key={item.category_name} onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)} className="flex items-center gap-3 text-left transition-opacity hover:opacity-70">
                 <span className="text-[10px] w-4 flex-shrink-0 tabular font-semibold" style={{ color: 'var(--text-3)' }}>{i + 1}</span>
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.category_color }} />
                 <span className="flex-1 text-[12px] truncate" style={{ color: 'var(--text-2)' }}>{item.category_name}</span>
@@ -219,22 +272,11 @@ export default function DashboardPage() {
 
         {/* Maiores lançamentos */}
         <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-4" style={{ color: 'var(--text-3)' }}>
-            Maiores lançamentos
-          </p>
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-4" style={{ color: 'var(--text-3)' }}>Maiores lançamentos</p>
           {metrics.topTransactions.length > 0 ? (
             <div className="flex flex-col gap-2">
               {metrics.topTransactions.map((tx, i) => (
-                <TransactionCard
-                  key={tx.id}
-                  transaction={tx}
-                  rank={i}
-                  onEdit={(t) => router.push(`/transactions?edit=${t.id}`)}
-                  onDelete={() => {}}
-                  onDeleteGroup={() => {}}
-                  onDuplicate={() => {}}
-                  onMarkRecovered={() => {}}
-                />
+                <TransactionCard key={tx.id} transaction={tx} rank={i} onEdit={(t) => router.push(`/transactions?edit=${t.id}`)} onDelete={() => {}} onDeleteGroup={() => {}} onDuplicate={() => {}} onMarkRecovered={() => {}} />
               ))}
             </div>
           ) : (
@@ -253,9 +295,12 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Dashboard</h1>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Visão geral das suas finanças</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+              {unifiedMode ? 'Visão financeira unificada' : 'Visão geral das suas finanças'}
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            {AccountSelector}
             <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
             <Button onClick={() => router.push('/transactions?new=1')} size="sm">
               <Plus size={13} /> Lançamento
@@ -277,7 +322,7 @@ export default function DashboardPage() {
 
         {/* 4-card metric grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <MetricCard label="Saldo Líquido" value={metrics.liquidTotal} icon={Activity} color={balanceColor} trend={metrics.liquidTotal >= 0 ? 'Positivo' : 'Negativo'} />
+          <MetricCard label={unifiedMode ? 'Saldo Unificado' : 'Saldo Líquido'} value={metrics.liquidTotal} icon={Activity} color={balanceColor} trend={metrics.liquidTotal >= 0 ? 'Positivo' : 'Negativo'} />
           <MetricCard label="Despesas" value={metrics.totalExpenses} icon={TrendingDown} color="var(--red)" trend={`${metrics.expenseCount} lançamentos`} />
           <MetricCard label="Receitas" value={metrics.totalIncome} icon={TrendingUp} color="var(--text-1)" trend={`${metrics.incomeCount} receitas`} />
           {metrics.totalRecover > 0 && (
@@ -288,31 +333,16 @@ export default function DashboardPage() {
         {/* Charts */}
         <div className={`grid gap-4 ${goals.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
           <Card className="p-5">
-            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
-              Composição
-            </p>
-            <DonutChart
-              data={metrics.expenseCategoryRanking}
-              total={metrics.totalExpenses}
-              onCategoryClick={(catId) => { if (catId) router.push(`/transactions?category=${catId}`) }}
-            />
+            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>Composição</p>
+            <DonutChart data={metrics.expenseCategoryRanking} total={metrics.totalExpenses} onCategoryClick={(catId) => { if (catId) router.push(`/transactions?category=${catId}`) }} />
           </Card>
 
           <Card className="p-5">
-            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
-              Gastos por dia
-            </p>
-            <BarChart
-              data={metrics.dailyTotals}
-              onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)}
-            />
+            <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>Gastos por dia</p>
+            <BarChart data={metrics.dailyTotals} onDayClick={(date) => router.push(`/transactions?date_from=${date}&date_to=${date}`)} />
             <div className="mt-6 flex flex-col gap-2.5">
               {metrics.expenseCategoryRanking.slice(0, 5).map((item, i) => (
-                <button
-                  key={item.category_name}
-                  onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)}
-                  className="flex items-center gap-3 text-left transition-opacity duration-150 hover:opacity-70"
-                >
+                <button key={item.category_name} onClick={() => item.category_id && router.push(`/transactions?category=${item.category_id}`)} className="flex items-center gap-3 text-left transition-opacity duration-150 hover:opacity-70">
                   <span className="text-[10px] w-4 flex-shrink-0 tabular font-semibold" style={{ color: 'var(--text-3)' }}>{i + 1}</span>
                   <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.category_color }} />
                   <span className="flex-1 text-[12px] truncate" style={{ color: 'var(--text-2)' }}>{item.category_name}</span>
@@ -325,45 +355,30 @@ export default function DashboardPage() {
 
           {goals.length > 0 && (
             <Card className="p-5">
-              <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-5" style={{ color: 'var(--text-3)' }}>
-                Metas
-              </p>
-              <GoalsProgress
-                goals={goals}
-                categories={categories}
-                categoryRanking={metrics.expenseCategoryRanking}
-                onCategoryClick={(catId) => router.push(`/transactions?category=${catId}`)}
-              />
+              <div className="flex items-center justify-between mb-5">
+                <p className="text-[9px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>Metas</p>
+                {unifiedMode && (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--text-3)' }}>
+                    Metas pessoais
+                  </span>
+                )}
+              </div>
+              <GoalsProgress goals={goals} categories={categories} categoryRanking={metrics.expenseCategoryRanking} onCategoryClick={(catId) => router.push(`/transactions?category=${catId}`)} />
             </Card>
           )}
         </div>
 
         {/* Top transactions */}
         <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-4" style={{ color: 'var(--text-3)' }}>
-            Maiores lançamentos
-          </p>
+          <p className="text-[9px] font-semibold uppercase tracking-[2px] mb-4" style={{ color: 'var(--text-3)' }}>Maiores lançamentos</p>
           {metrics.topTransactions.length > 0 ? (
             <div className="flex flex-col gap-2">
               {metrics.topTransactions.map((tx, i) => (
-                <TransactionCard
-                  key={tx.id}
-                  transaction={tx}
-                  rank={i}
-                  onEdit={() => router.push(`/transactions?edit=${tx.id}`)}
-                  onDelete={() => {}}
-                  onDeleteGroup={() => {}}
-                  onDuplicate={() => {}}
-                  onMarkRecovered={() => {}}
-                />
+                <TransactionCard key={tx.id} transaction={tx} rank={i} onEdit={() => router.push(`/transactions?edit=${tx.id}`)} onDelete={() => {}} onDeleteGroup={() => {}} onDuplicate={() => {}} onMarkRecovered={() => {}} />
               ))}
             </div>
           ) : (
-            <EmptyState
-              icon={Activity}
-              title="Sem lançamentos"
-              description="Adicione seu primeiro lançamento no Extrato"
-            />
+            <EmptyState icon={Activity} title="Sem lançamentos" description="Adicione seu primeiro lançamento no Extrato" />
           )}
         </div>
         </>}

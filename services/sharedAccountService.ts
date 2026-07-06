@@ -1,0 +1,368 @@
+import { createClient } from '@/lib/supabase/client'
+import type {
+  SharedAccount,
+  SharedAccountMember,
+  SharedAccountMemberWithProfile,
+  SharedAccountInvite,
+  SharedCategory,
+  SharedGoal,
+  CategorySetupOption,
+  InvitePageData,
+} from '@/types/sharedAccount'
+import type { Category } from '@/types/category'
+import type { CategoryGoal } from '@/types/goal'
+import type { Transaction } from '@/types/transaction'
+
+// New tables aren't in generated Supabase types until migrations run
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = (): any => createClient()
+
+// ─── Account ────────────────────────────────────────────────────────────────
+
+export async function getMySharedAccount(): Promise<SharedAccount | null> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data } = await supabase
+    .from('shared_account_members')
+    .select('shared_account_id, shared_accounts(*)')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (!data) return null
+  return (data as unknown as { shared_accounts: SharedAccount }).shared_accounts ?? null
+}
+
+export async function createSharedAccount(name = 'Conta Compartilhada'): Promise<SharedAccount> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+
+  const { data: account, error: accErr } = await supabase
+    .from('shared_accounts')
+    .insert({ name, created_by: user.id })
+    .select()
+    .single()
+  if (accErr) throw accErr
+
+  const { error: memErr } = await supabase
+    .from('shared_account_members')
+    .insert({ shared_account_id: account.id, user_id: user.id, role: 'admin' })
+  if (memErr) throw memErr
+
+  return account as SharedAccount
+}
+
+export async function leaveSharedAccount(sharedAccountId: string): Promise<void> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+
+  const { error } = await supabase
+    .from('shared_account_members')
+    .update({ status: 'left' })
+    .eq('shared_account_id', sharedAccountId)
+    .eq('user_id', user.id)
+  if (error) throw error
+}
+
+// ─── Members ─────────────────────────────────────────────────────────────────
+
+export async function getSharedAccountMembers(sharedAccountId: string): Promise<SharedAccountMemberWithProfile[]> {
+  const supabase = db()
+  const { data, error } = await supabase
+    .from('shared_account_members')
+    .select('*, profiles(name)')
+    .eq('shared_account_id', sharedAccountId)
+    .eq('status', 'active')
+  if (error) throw error
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    ...(row as unknown as SharedAccountMember),
+    name: (row.profiles as { name: string | null } | null)?.name ?? null,
+    email: null,
+  }))
+}
+
+// ─── Invites ─────────────────────────────────────────────────────────────────
+
+export async function getOrCreateInvite(sharedAccountId: string): Promise<SharedAccountInvite> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+
+  const { data: existing } = await supabase
+    .from('shared_account_invites')
+    .select('*')
+    .eq('shared_account_id', sharedAccountId)
+    .eq('created_by', user.id)
+    .eq('status', 'pending')
+    .gte('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) return existing as SharedAccountInvite
+
+  const { data, error } = await supabase
+    .from('shared_account_invites')
+    .insert({ shared_account_id: sharedAccountId, created_by: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data as SharedAccountInvite
+}
+
+export async function revokeInvite(inviteId: string): Promise<void> {
+  const supabase = db()
+  const { error } = await supabase
+    .from('shared_account_invites')
+    .update({ status: 'revoked' })
+    .eq('id', inviteId)
+  if (error) throw error
+}
+
+// ─── Public invite lookup (no auth needed) ───────────────────────────────────
+
+export async function lookupInvitePageData(token: string): Promise<InvitePageData | null> {
+  const supabase = db()
+
+  const { data: invite } = await supabase
+    .from('shared_account_invites')
+    .select('*, shared_accounts(*)')
+    .eq('token', token)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (!invite) return null
+
+  const now = new Date()
+  if (new Date(invite.expires_at) < now) return null
+
+  const row = invite as unknown as Record<string, unknown>
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', (invite as unknown as SharedAccountInvite).created_by)
+    .maybeSingle()
+
+  return {
+    invite: invite as unknown as SharedAccountInvite,
+    account: row.shared_accounts as SharedAccount,
+    inviterName: (profile as { name: string | null } | null)?.name ?? null,
+  }
+}
+
+// ─── Accept invite ────────────────────────────────────────────────────────────
+
+export async function acceptInvite(token: string): Promise<{ sharedAccountId: string; inviterId: string }> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+
+  const { data: invite, error: invErr } = await supabase
+    .from('shared_account_invites')
+    .select('*')
+    .eq('token', token)
+    .eq('status', 'pending')
+    .single()
+  if (invErr || !invite) throw new Error('Convite inválido ou expirado')
+  if (new Date(invite.expires_at) < new Date()) throw new Error('Convite expirado')
+  if (invite.created_by === user.id) throw new Error('Você não pode aceitar seu próprio convite')
+
+  const { data: existing } = await supabase
+    .from('shared_account_members')
+    .select('id')
+    .eq('shared_account_id', invite.shared_account_id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (existing) throw new Error('Você já faz parte desta conta compartilhada')
+
+  const { error: memErr } = await supabase
+    .from('shared_account_members')
+    .insert({ shared_account_id: invite.shared_account_id, user_id: user.id, role: 'member' })
+  if (memErr) throw memErr
+
+  const { error: updErr } = await supabase
+    .from('shared_account_invites')
+    .update({ status: 'accepted', accepted_by: user.id, accepted_at: new Date().toISOString() })
+    .eq('id', invite.id)
+  if (updErr) throw updErr
+
+  return { sharedAccountId: invite.shared_account_id, inviterId: invite.created_by }
+}
+
+// ─── Category setup after invite acceptance ───────────────────────────────────
+
+async function getMemberCategories(sharedAccountId: string, memberUserId: string): Promise<Category[]> {
+  const supabase = db()
+  const { data, error } = await supabase.rpc('get_shared_account_member_categories', {
+    p_shared_account_id: sharedAccountId,
+    p_member_user_id: memberUserId,
+  })
+  if (error) throw error
+  return (data ?? []) as Category[]
+}
+
+async function getMemberGoals(sharedAccountId: string, memberUserId: string): Promise<CategoryGoal[]> {
+  const supabase = db()
+  const { data, error } = await supabase.rpc('get_shared_account_member_goals', {
+    p_shared_account_id: sharedAccountId,
+    p_member_user_id: memberUserId,
+  })
+  if (error) throw error
+  return (data ?? []) as CategoryGoal[]
+}
+
+function normalizeName(name: string) {
+  return name.toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+async function createSharedCategories(
+  sharedAccountId: string,
+  categories: Category[],
+  fromUserId: string
+): Promise<SharedCategory[]> {
+  if (categories.length === 0) return []
+  const supabase = db()
+  const rows = categories.map((c) => ({
+    shared_account_id: sharedAccountId,
+    name: c.name,
+    icon: c.icon,
+    color: c.color,
+    type: c.type,
+    created_from_user_id: fromUserId,
+    original_category_id: c.id,
+  }))
+  const { data, error } = await supabase.from('shared_categories').insert(rows).select()
+  if (error) throw error
+  return (data ?? []) as SharedCategory[]
+}
+
+async function createSharedGoals(
+  sharedAccountId: string,
+  goals: CategoryGoal[],
+  sharedCategories: SharedCategory[],
+  fromUserId: string
+): Promise<void> {
+  if (goals.length === 0) return
+  const supabase = db()
+  const rows = goals
+    .map((g) => {
+      const matching = sharedCategories.find((sc) => sc.original_category_id === g.category_id)
+      if (!matching) return null
+      return {
+        shared_account_id: sharedAccountId,
+        shared_category_id: matching.id,
+        amount: g.amount,
+        period: 'monthly',
+        created_from_user_id: fromUserId,
+      }
+    })
+    .filter(Boolean)
+
+  if (rows.length === 0) return
+  const { error } = await supabase.from('shared_goals').insert(rows)
+  if (error) throw error
+}
+
+export async function setupSharedCategories(
+  sharedAccountId: string,
+  option: CategorySetupOption,
+  myUserId: string,
+  inviterId: string,
+  myCategories: Category[],
+  myGoals: CategoryGoal[]
+): Promise<void> {
+  if (option === 'zero') return
+
+  if (option === 'mine') {
+    const created = await createSharedCategories(sharedAccountId, myCategories, myUserId)
+    await createSharedGoals(sharedAccountId, myGoals, created, myUserId)
+    return
+  }
+
+  if (option === 'theirs') {
+    const theirCats = await getMemberCategories(sharedAccountId, inviterId)
+    const theirGoals = await getMemberGoals(sharedAccountId, inviterId)
+    const created = await createSharedCategories(sharedAccountId, theirCats, inviterId)
+    await createSharedGoals(sharedAccountId, theirGoals, created, inviterId)
+    return
+  }
+
+  if (option === 'merge') {
+    const theirCats = await getMemberCategories(sharedAccountId, inviterId)
+    const theirGoals = await getMemberGoals(sharedAccountId, inviterId)
+
+    const seen = new Map<string, Category>()
+    for (const cat of [...myCategories, ...theirCats]) {
+      const key = `${normalizeName(cat.name)}:${cat.type}`
+      if (!seen.has(key)) seen.set(key, cat)
+    }
+
+    const merged = Array.from(seen.values())
+    const created = await createSharedCategories(sharedAccountId, merged, myUserId)
+
+    const allGoals = [...myGoals, ...theirGoals]
+    const goalsByCategory = new Map<string, number>()
+    for (const g of allGoals) {
+      goalsByCategory.set(g.category_id, (goalsByCategory.get(g.category_id) ?? 0) + g.amount)
+    }
+
+    const mergedGoals: CategoryGoal[] = Array.from(goalsByCategory.entries()).map(([catId, amount]) => ({
+      id: '',
+      user_id: myUserId,
+      category_id: catId,
+      amount,
+      created_at: '',
+      updated_at: '',
+    }))
+    await createSharedGoals(sharedAccountId, mergedGoals, created, myUserId)
+    return
+  }
+}
+
+// ─── Shared transactions (via RPC) ───────────────────────────────────────────
+
+export async function getSharedTransactions(
+  sharedAccountId: string,
+  dateFrom?: string,
+  dateTo?: string,
+  filterUserId?: string | null
+): Promise<Transaction[]> {
+  const supabase = db()
+  const { data, error } = await supabase.rpc('get_shared_account_transactions', {
+    p_shared_account_id: sharedAccountId,
+    p_date_from: dateFrom ?? null,
+    p_date_to: dateTo ?? null,
+    p_filter_user_id: filterUserId ?? null,
+  })
+  if (error) throw error
+  return (data ?? []) as unknown as Transaction[]
+}
+
+// ─── Shared categories & goals (for unified goals view) ──────────────────────
+
+export async function getSharedCategories(sharedAccountId: string): Promise<SharedCategory[]> {
+  const supabase = db()
+  const { data, error } = await supabase
+    .from('shared_categories')
+    .select('*')
+    .eq('shared_account_id', sharedAccountId)
+    .order('name')
+  if (error) throw error
+  return (data ?? []) as SharedCategory[]
+}
+
+export async function getSharedGoals(sharedAccountId: string): Promise<SharedGoal[]> {
+  const supabase = db()
+  const { data, error } = await supabase
+    .from('shared_goals')
+    .select('*, shared_category:shared_categories(*)')
+    .eq('shared_account_id', sharedAccountId)
+  if (error) throw error
+  return (data ?? []) as unknown as SharedGoal[]
+}

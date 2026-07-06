@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
+import { Plus, Search, X, SlidersHorizontal, Users } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
@@ -10,6 +10,8 @@ import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
+import { useSharedAccount } from '@/contexts/SharedAccountContext'
+import { getSharedTransactions } from '@/services/sharedAccountService'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
@@ -61,8 +63,27 @@ function TransactionsContent() {
     sort_by: sortBy,
   }
 
-  const { transactions, loading, refetch, add, update, remove, duplicate, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
+  const { transactions, loading, refetch, add, update, remove, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
+  const { sharedAccount, unifiedMode, filterUserId, members, setUnifiedMode, setFilterUserId } = useSharedAccount()
+
+  // Unified transactions state
+  const [unifiedTxs, setUnifiedTxs]           = useState<Transaction[]>([])
+  const [unifiedLoading, setUnifiedLoading]   = useState(false)
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!unifiedMode || !sharedAccount) { setUnifiedTxs([]); return }
+    setUnifiedLoading(true)
+    getSharedTransactions(sharedAccount.id, dateFrom || undefined, dateTo || undefined, filterUserId)
+      .then(setUnifiedTxs)
+      .catch(() => setUnifiedTxs([]))
+      .finally(() => setUnifiedLoading(false))
+  }, [unifiedMode, sharedAccount?.id, filterUserId, dateFrom, dateTo]) // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const displayTxs     = unifiedMode ? (search ? unifiedTxs.filter(t => t.description.toLowerCase().includes(search.toLowerCase())) : unifiedTxs) : transactions
+  const displayLoading = unifiedMode ? unifiedLoading : loading
 
   const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
     if (editing) {
@@ -135,7 +156,22 @@ function TransactionsContent() {
     setDateTo(t)
   }
   const hasFilters = search || catFilter
-  const total = transactions.reduce((s, t) => s + t.value, 0)
+  const total = displayTxs.reduce((s, t) => s + t.value, 0)
+
+  // Account view selector (mirrored from dashboard)
+  const viewOptions = sharedAccount && members.length >= 2
+    ? [
+        { key: 'personal', label: 'Minha conta', userId: null, unified: false },
+        { key: 'all', label: 'Conta unificada', userId: null, unified: true },
+        ...members.map(m => ({ key: m.user_id, label: m.name || 'Membro', userId: m.user_id, unified: true })),
+      ]
+    : null
+  const activeViewKey = !unifiedMode ? 'personal' : (filterUserId ?? 'all')
+  function selectView(key: string) {
+    if (key === 'personal') { setUnifiedMode(false); return }
+    setUnifiedMode(true)
+    setFilterUserId(key === 'all' ? null : key)
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -144,10 +180,21 @@ function TransactionsContent() {
         <div>
           <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Extrato</h1>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-            {loading ? 'Carregando…' : `${transactions.length} lançamentos · ${formatCurrency(total)}`}
+            {displayLoading ? 'Carregando…' : `${displayTxs.length} lançamentos · ${formatCurrency(total)}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {viewOptions && (
+            <div className="flex items-center gap-1.5">
+              <Users size={12} style={{ color: 'var(--text-3)' }} />
+              {viewOptions.map((opt) => (
+                <button key={opt.key} onClick={() => selectView(opt.key)} className="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition-all"
+                  style={{ background: activeViewKey === opt.key ? 'var(--accent)' : 'var(--surface)', color: activeViewKey === opt.key ? 'var(--accent-text)' : 'var(--text-3)', border: `1px solid ${activeViewKey === opt.key ? 'var(--accent)' : 'var(--border)'}` }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
           <MonthPicker value={selectedMonth} onChange={applyMonth} />
           <VoiceMicButton
             onResult={(transcript) => {
@@ -248,13 +295,13 @@ function TransactionsContent() {
       </div>
 
       {/* List */}
-      {loading ? (
+      {displayLoading ? (
         <div className="flex justify-center py-14">
           <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
         </div>
-      ) : transactions.length > 0 ? (
+      ) : displayTxs.length > 0 ? (
         <div className="flex flex-col gap-2">
-          {transactions.map((tx) => (
+          {displayTxs.map((tx) => (
             <TransactionCard
               key={tx.id}
               transaction={tx}

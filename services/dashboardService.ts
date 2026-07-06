@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSharedTransactions } from '@/services/sharedAccountService'
 import type { Transaction } from '@/types/transaction'
 
 export interface DashboardMetrics {
@@ -31,25 +32,7 @@ export interface DailyTotal {
   count: number
 }
 
-export async function getDashboardMetrics(
-  dateFrom?: string,
-  dateTo?: string
-): Promise<DashboardMetrics> {
-  const supabase = createClient()
-
-  let query = supabase
-    .from('transactions')
-    .select('*, category:categories(*)')
-    .order('date', { ascending: false })
-
-  if (dateFrom) query = query.gte('date', dateFrom)
-  if (dateTo)   query = query.lte('date', dateTo)
-
-  const { data, error } = await query
-  if (error) throw error
-
-  const txs = data as unknown as Transaction[]
-
+export function computeMetrics(txs: Transaction[]): DashboardMetrics {
   const expenses = txs.filter((t) => t.type === 'expense')
   const income   = txs.filter((t) => t.type === 'income')
   const recover  = txs.filter((t) => t.type === 'recover' && t.status !== 'recovered')
@@ -59,10 +42,11 @@ export async function getDashboardMetrics(
   const totalRecover  = recover.reduce((s, t) => s + t.value, 0)
   const liquidTotal   = totalIncome - totalExpenses
 
-  // Category ranking
+  // Category ranking — group by name in unified mode (owner may differ)
   const catMap = new Map<string, { name: string; color: string; total: number; count: number; id: string | null }>()
   txs.forEach((t) => {
-    const key = t.category_id ?? '__none__'
+    const catName = t.category?.name ?? 'Sem categoria'
+    const key = catName.toLowerCase().trim()
     const existing = catMap.get(key)
     if (existing) {
       existing.total += t.value
@@ -70,7 +54,7 @@ export async function getDashboardMetrics(
     } else {
       catMap.set(key, {
         id: t.category_id,
-        name: t.category?.name ?? 'Sem categoria',
+        name: catName,
         color: t.category?.color ?? '#666',
         total: t.value,
         count: 1,
@@ -79,8 +63,8 @@ export async function getDashboardMetrics(
   })
 
   const grandTotal = txs.reduce((s, t) => s + t.value, 0)
-  const categoryRanking: CategoryRankItem[] = Array.from(catMap.entries())
-    .map(([, v]) => ({
+  const categoryRanking: CategoryRankItem[] = Array.from(catMap.values())
+    .map((v) => ({
       category_id: v.id,
       category_name: v.name,
       category_color: v.color,
@@ -90,13 +74,14 @@ export async function getDashboardMetrics(
     }))
     .sort((a, b) => b.total - a.total)
 
-  // Expense-only category ranking (for DonutChart)
+  // Expense-only category ranking
   const expCatMap = new Map<string, { name: string; color: string; total: number; count: number; id: string | null }>()
   expenses.forEach((t) => {
-    const key = t.category_id ?? '__none__'
+    const catName = t.category?.name ?? 'Sem categoria'
+    const key = catName.toLowerCase().trim()
     const existing = expCatMap.get(key)
     if (existing) { existing.total += t.value; existing.count += 1 }
-    else expCatMap.set(key, { id: t.category_id, name: t.category?.name ?? 'Sem categoria', color: t.category?.color ?? '#666', total: t.value, count: 1 })
+    else expCatMap.set(key, { id: t.category_id, name: catName, color: t.category?.color ?? '#666', total: t.value, count: 1 })
   })
   const expenseCategoryRanking: CategoryRankItem[] = Array.from(expCatMap.values())
     .map((v) => ({
@@ -140,4 +125,34 @@ export async function getDashboardMetrics(
     topTransactions,
     biggestCategory: categoryRanking[0] ?? null,
   }
+}
+
+export async function getDashboardMetrics(
+  dateFrom?: string,
+  dateTo?: string
+): Promise<DashboardMetrics> {
+  const supabase = createClient()
+
+  let query = supabase
+    .from('transactions')
+    .select('*, category:categories(*)')
+    .order('date', { ascending: false })
+
+  if (dateFrom) query = query.gte('date', dateFrom)
+  if (dateTo)   query = query.lte('date', dateTo)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return computeMetrics(data as unknown as Transaction[])
+}
+
+export async function getUnifiedDashboardMetrics(
+  sharedAccountId: string,
+  filterUserId: string | null,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<DashboardMetrics> {
+  const txs = await getSharedTransactions(sharedAccountId, dateFrom, dateTo, filterUserId)
+  return computeMetrics(txs)
 }

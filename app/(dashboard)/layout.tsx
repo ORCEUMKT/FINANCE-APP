@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { TopBar } from '@/components/layout/TopBar'
 import { MonthProvider } from '@/contexts/MonthContext'
+import { SharedAccountProvider } from '@/contexts/SharedAccountContext'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Sidebar user={null} />
         <main className="flex-1 min-w-0 pb-24 lg:pb-0 overflow-y-auto relative z-10 lg:pl-16">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-8">
-            <MonthProvider>{children}</MonthProvider>
+            <SharedAccountProvider><MonthProvider>{children}</MonthProvider></SharedAccountProvider>
           </div>
         </main>
       </div>
