@@ -21,7 +21,10 @@ export function useUnifiedDashboardMetrics(
       const data = await getUnifiedDashboardMetrics(sharedAccountId, filterUserId, dateFrom, dateTo)
       setMetrics(data)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao carregar métricas unificadas.')
+      const msg = e instanceof Error
+        ? e.message
+        : (e as { message?: string })?.message ?? JSON.stringify(e)
+      setError(msg)
       setMetrics(null)
     } finally {
       setLoading(false)
