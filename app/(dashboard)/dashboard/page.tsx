@@ -116,7 +116,7 @@ export default function DashboardPage() {
   void chartTotal
   const balanceColor = (metrics?.liquidTotal ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'
 
-  if (loading) {
+  if (loading || !metrics) {
     return (
       <div className="flex items-center justify-center h-64">
         <div
@@ -126,8 +126,6 @@ export default function DashboardPage() {
       </div>
     )
   }
-
-  if (!metrics) return null
 
   // Account selector pill row
   const AccountSelector = viewOptions ? (
