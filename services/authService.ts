@@ -9,12 +9,16 @@ export async function signIn(email: string, password: string) {
 
 export async function signUp(email: string, password: string, name: string) {
   const supabase = createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { name } },
   })
   if (error) throw error
+
+  if (data.user) {
+    await supabase.from('profiles').upsert({ id: data.user.id, name })
+  }
 }
 
 export async function signOut() {

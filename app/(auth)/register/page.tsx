@@ -22,6 +22,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
 
+    if (!name.trim()) { setError('Informe seu nome.'); return }
     if (!validateEmail(email)) { setError('E-mail inválido.'); return }
     const pwErr = validatePassword(password)
     if (pwErr) { setError(pwErr); return }
