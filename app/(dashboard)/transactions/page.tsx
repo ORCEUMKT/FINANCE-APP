@@ -178,6 +178,13 @@ function TransactionsContent() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Account selector — first on mobile */}
+      {viewOptions && (
+        <div className="lg:hidden">
+          <AccountViewSelector options={viewOptions} activeKey={activeViewKey} onChange={selectView} />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -188,11 +195,9 @@ function TransactionsContent() {
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {viewOptions && (
-            <AccountViewSelector
-              options={viewOptions}
-              activeKey={activeViewKey}
-              onChange={selectView}
-            />
+            <div className="hidden lg:block">
+              <AccountViewSelector options={viewOptions} activeKey={activeViewKey} onChange={selectView} />
+            </div>
           )}
           <MonthPicker value={selectedMonth} onChange={applyMonth} />
           <VoiceMicButton
