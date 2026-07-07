@@ -10,7 +10,6 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
   const currentIndex = options.findIndex((o) => o.key === activeKey)
   const activeLabel  = options[currentIndex]?.label ?? options[0]?.label
 
-  // ── Desktop dropdown ────────────────────────────────────────────────────────
   const [open, setOpen] = useState(false)
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 })
   const ref = useRef<HTMLDivElement>(null)
@@ -23,7 +22,7 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
     return () => document.removeEventListener('mousedown', out)
   }, [open])
 
-  function handleClick() {
+  function handleToggle() {
     if (!ref.current) return
     const rect = ref.current.getBoundingClientRect()
     const w = 180
@@ -32,89 +31,11 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
     setOpen((v) => !v)
   }
 
-  // ── Mobile press-and-drag ───────────────────────────────────────────────────
-  const [pressing, setPressing] = useState(false)
-  const [hoverIdx, setHoverIdx] = useState(currentIndex)
-  const pillRef = useRef<HTMLDivElement>(null)
-
-  function onTouchStart(e: React.TouchEvent) {
-    setHoverIdx(currentIndex)
-    setPressing(true)
-  }
-
-  function onTouchMove(e: React.TouchEvent) {
-    if (!pressing || !pillRef.current) return
-    const touch = e.touches[0]
-    const children = Array.from(pillRef.current.children) as HTMLElement[]
-    for (let i = 0; i < children.length; i++) {
-      const r = children[i].getBoundingClientRect()
-      if (touch.clientX >= r.left && touch.clientX <= r.right) {
-        setHoverIdx(i)
-        break
-      }
-    }
-  }
-
-  function onTouchEnd() {
-    if (pressing) onChange(options[hoverIdx].key)
-    setPressing(false)
-  }
-
   return (
     <div ref={ref} className="relative flex-shrink-0">
-
-      {/* ── Mobile ── */}
-      <div
-        className="lg:hidden"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {pressing ? (
-          /* Expanded pill — options side by side */
-          <div
-            ref={pillRef}
-            className="flex items-center gap-1 p-1 rounded-full"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border-md)',
-              boxShadow: 'var(--shadow-elevated)',
-            }}
-          >
-            {options.map((opt, i) => (
-              <div
-                key={opt.key}
-                className="px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-100"
-                style={{
-                  background: i === hoverIdx ? 'var(--accent)' : 'transparent',
-                  color: i === hoverIdx ? 'var(--accent-text)' : 'var(--text-3)',
-                }}
-              >
-                {opt.label}
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Collapsed — same pill as desktop */
-          <button
-            className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full"
-            style={{
-              background: 'var(--surface)',
-              color: 'var(--text-2)',
-              border: '1px solid var(--border-md)',
-            }}
-          >
-            <Users size={11} style={{ color: 'var(--text-3)' }} />
-            {activeLabel}
-            <ChevronDown size={10} style={{ color: 'var(--text-3)' }} />
-          </button>
-        )}
-      </div>
-
-      {/* ── Desktop dropdown button ── */}
       <button
-        onClick={handleClick}
-        className="hidden lg:flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all"
+        onClick={handleToggle}
+        className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all"
         style={{
           background: 'var(--surface)',
           color: 'var(--text-2)',
@@ -130,7 +51,6 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
         }} />
       </button>
 
-      {/* Desktop dropdown menu */}
       {open && (
         <div
           className="fixed min-w-[180px] rounded-2xl overflow-hidden z-[999]"
