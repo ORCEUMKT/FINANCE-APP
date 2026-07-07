@@ -172,7 +172,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setInstallments(prefill?.installments ?? 1)
         const catId = prefill?.category_name
           ? findCategoryId(categories, prefill.category_name)
-          : (categories[0]?.id ?? '')
+          : ''
         setCategoryId(catId)
       }
       setErrors([])
