@@ -7,7 +7,7 @@ import { useGoals } from '@/hooks/useGoals'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import { useUnifiedDashboardMetrics } from '@/hooks/useUnifiedDashboardMetrics'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedGoals } from '@/services/sharedAccountService'
+import { getSharedCategories, getSharedGoals, upsertSharedGoal, deleteSharedGoal } from '@/services/sharedAccountService'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
 import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
@@ -17,7 +17,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/lib/formatters'
 import type { Category } from '@/types/category'
 import type { CategoryGoal } from '@/types/goal'
-import type { SharedGoal } from '@/types/sharedAccount'
+import type { SharedCategory, SharedGoal } from '@/types/sharedAccount'
 
 const STATUS_COLOR = { ok: 'var(--green)', warning: 'var(--orange)', over: 'var(--red)' } as const
 const STATUS_LABEL = { ok: 'Dentro da meta', warning: 'Atenção', over: 'Ultrapassou' } as const
@@ -38,20 +38,29 @@ export default function GoalsPage() {
     dateTo
   )
 
+  const [sharedCats, setSharedCats]   = useState<SharedCategory[]>([])
   const [sharedGoals, setSharedGoals] = useState<SharedGoal[]>([])
   const [sharedGoalsLoading, setSharedGoalsLoading] = useState(false)
 
   const { toast } = useToast()
+  // Personal goal editing
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft]         = useState('')
   const [saving, setSaving]       = useState(false)
+  // Shared goal editing
+  const [sharedEditingId, setSharedEditingId] = useState<string | null>(null)
+  const [sharedDraft, setSharedDraft]         = useState('')
+  const [sharedSaving, setSharedSaving]       = useState(false)
 
   useEffect(() => {
-    if (!unifiedMode || !sharedAccount) { setSharedGoals([]); return }
+    if (!unifiedMode || !sharedAccount) { setSharedCats([]); setSharedGoals([]); return }
     setSharedGoalsLoading(true)
-    getSharedGoals(sharedAccount.id)
-      .then(setSharedGoals)
-      .catch(() => setSharedGoals([]))
+    Promise.all([
+      getSharedCategories(sharedAccount.id),
+      getSharedGoals(sharedAccount.id),
+    ])
+      .then(([cats, goals]) => { setSharedCats(cats); setSharedGoals(goals) })
+      .catch(() => { setSharedCats([]); setSharedGoals([]) })
       .finally(() => setSharedGoalsLoading(false))
   }, [unifiedMode, sharedAccount?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -106,6 +115,38 @@ export default function GoalsPage() {
     await remove(categoryId); toast('Meta removida.')
   }
 
+  // ── Shared goals CRUD ─────────────────────────────────────────────────────
+  function startEditShared(cat: SharedCategory, goal?: SharedGoal) {
+    setSharedEditingId(cat.id); setSharedDraft(goal ? String(goal.amount) : '')
+  }
+  function cancelEditShared() { setSharedEditingId(null); setSharedDraft('') }
+
+  async function saveSharedGoal(cat: SharedCategory) {
+    if (!sharedAccount) return
+    const amount = parseFloat(sharedDraft.replace(',', '.'))
+    if (!amount || amount <= 0) { toast('Informe um valor válido.', { type: 'error' }); return }
+    setSharedSaving(true)
+    try {
+      const saved = await upsertSharedGoal(sharedAccount.id, cat.id, amount)
+      setSharedGoals((prev) => {
+        const exists = prev.find((g) => g.shared_category_id === cat.id)
+        return exists ? prev.map((g) => g.shared_category_id === cat.id ? saved : g) : [...prev, saved]
+      })
+      toast('Meta salva!'); setSharedEditingId(null)
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro ao salvar meta.', { type: 'error' })
+    } finally {
+      setSharedSaving(false)
+    }
+  }
+
+  async function deleteSharedGoalById(goal: SharedGoal) {
+    if (!confirm('Remover meta desta categoria compartilhada?')) return
+    await deleteSharedGoal(goal.id)
+    setSharedGoals((prev) => prev.filter((g) => g.id !== goal.id))
+    toast('Meta removida.')
+  }
+
   // ── Unified goals logic ───────────────────────────────────────────────────
   const unifiedLoading = sharedGoalsLoading || unifiedMetricsLoading
 
@@ -157,9 +198,9 @@ export default function GoalsPage() {
         </div>
       ) : unifiedMode ? (
         /* ── UNIFIED GOALS VIEW ── */
-        sharedGoals.length === 0 ? (
-          <EmptyState icon={Target} title="Sem metas compartilhadas"
-            description="Nenhuma meta foi configurada para a conta compartilhada" />
+        sharedCats.length === 0 ? (
+          <EmptyState icon={Target} title="Sem categorias compartilhadas"
+            description="Configure categorias na aba Categorias para definir metas" />
         ) : (
           <>
             {sharedGoals.length > 0 && sharedTotalBudget > 0 && (
@@ -190,22 +231,47 @@ export default function GoalsPage() {
               </Card>
             )}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {sharedGoals.map((goal) => {
-                const cat = goal.shared_category
-                const origCatId = cat?.original_category_id
+              {sharedCats.map((cat) => {
+                const goal = sharedGoals.find((g) => g.shared_category_id === cat.id)
+                const origCatId = cat.original_category_id
                 const rank = origCatId ? unifiedMetrics?.expenseCategoryRanking.find((r) => r.category_id === origCatId) : null
                 const spent = rank?.total ?? 0
-                const pct = goal.amount > 0 ? (spent / goal.amount) * 100 : 0
+                const pct = goal && goal.amount > 0 ? (spent / goal.amount) * 100 : 0
                 const status: 'ok' | 'warning' | 'over' = pct > 100 ? 'over' : pct >= 80 ? 'warning' : 'ok'
+                const isEditing = sharedEditingId === cat.id
                 return (
-                  <Card key={goal.id} className="p-4 flex flex-col gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {cat && <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat.color }} />}
-                      <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-1)' }}>
-                        {cat?.name ?? 'Sem categoria'}
-                      </span>
+                  <Card key={cat.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat.color }} />
+                        <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-1)' }}>{cat.name}</span>
+                      </div>
+                      {goal && !isEditing && (
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button onClick={() => startEditShared(cat, goal)}
+                            className="w-6 h-6 rounded-md flex items-center justify-center transition-colors hover:bg-white/[.06]"
+                            style={{ color: 'var(--text-3)' }}><Edit2 size={11} /></button>
+                          <button onClick={() => deleteSharedGoalById(goal)}
+                            className="w-6 h-6 rounded-md flex items-center justify-center transition-colors hover:bg-white/[.06]"
+                            style={{ color: 'var(--text-3)' }}><Trash2 size={11} /></button>
+                        </div>
+                      )}
                     </div>
-                    {goal.amount > 0 ? (
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input autoFocus type="number" step="0.01" min="0.01" placeholder="Ex: 500,00"
+                          value={sharedDraft} onChange={(e) => setSharedDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveSharedGoal(cat); if (e.key === 'Escape') cancelEditShared() }}
+                          className="flex-1 rounded-[10px] px-3 py-2 text-sm outline-none"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-1)' }} />
+                        <button onClick={() => saveSharedGoal(cat)} disabled={sharedSaving}
+                          className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+                          style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}><Check size={13} /></button>
+                        <button onClick={cancelEditShared}
+                          className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)' }}><X size={13} /></button>
+                      </div>
+                    ) : goal ? (
                       <>
                         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                           <div className="h-full rounded-full transition-all duration-300"
@@ -220,7 +286,11 @@ export default function GoalsPage() {
                         <span className="text-[10px] font-semibold" style={{ color: STATUS_COLOR[status] }}>{STATUS_LABEL[status]}</span>
                       </>
                     ) : (
-                      <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Sem meta definida</span>
+                      <button onClick={() => startEditShared(cat)}
+                        className="flex items-center justify-center gap-1.5 h-9 rounded-[10px] text-[11px] font-medium transition-opacity hover:opacity-70"
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-2)' }}>
+                        <Target size={12} /> Definir meta
+                      </button>
                     )}
                   </Card>
                 )

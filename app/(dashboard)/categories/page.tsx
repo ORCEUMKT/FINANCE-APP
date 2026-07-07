@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Tag, Lock } from 'lucide-react'
+import { Plus, Edit2, Trash2, Tag } from 'lucide-react'
 import { useCategories } from '@/hooks/useCategories'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedCategories } from '@/services/sharedAccountService'
+import { getSharedCategories, updateSharedCategory, deleteSharedCategory } from '@/services/sharedAccountService'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -48,6 +48,14 @@ export default function CategoriesPage() {
   const [formError, setFormError] = useState('')
   const [saving, setSaving]       = useState(false)
   const [deleting, setDeleting]   = useState<string | null>(null)
+
+  // Shared category editing
+  const [sharedFormOpen, setSharedFormOpen]   = useState(false)
+  const [editingShared, setEditingShared]     = useState<SharedCategory | null>(null)
+  const [sharedForm, setSharedForm]           = useState<FormState>(DEFAULT_FORM)
+  const [sharedFormError, setSharedFormError] = useState('')
+  const [sharedSaving, setSharedSaving]       = useState(false)
+  const [sharedDeleting, setSharedDeleting]   = useState<string | null>(null)
 
   useEffect(() => {
     if (!unifiedMode || !sharedAccount) { setSharedCats([]); return }
@@ -108,6 +116,47 @@ export default function CategoriesPage() {
     finally { setDeleting(null) }
   }
 
+  function openEditShared(cat: SharedCategory) {
+    setEditingShared(cat)
+    setSharedForm({ name: cat.name, color: cat.color, icon: cat.icon, type: cat.type as Category['type'] })
+    setSharedFormError('')
+    setSharedFormOpen(true)
+  }
+
+  async function handleSharedSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingShared) return
+    const errs = validateCategory(sharedForm)
+    if (errs.length) { setSharedFormError(errs[0].message); return }
+    setSharedSaving(true)
+    try {
+      const updated = await updateSharedCategory(editingShared.id, {
+        name: sharedForm.name.trim(), color: sharedForm.color, icon: sharedForm.icon, type: sharedForm.type,
+      })
+      setSharedCats((prev) => prev.map((c) => c.id === updated.id ? updated : c))
+      toast('Categoria atualizada!')
+      setSharedFormOpen(false)
+    } catch (err: unknown) {
+      setSharedFormError(err instanceof Error ? err.message : 'Erro ao salvar.')
+    } finally {
+      setSharedSaving(false)
+    }
+  }
+
+  async function handleSharedDelete(cat: SharedCategory) {
+    if (!confirm(`Excluir "${cat.name}" da conta compartilhada?\n\nAs metas associadas também serão removidas.`)) return
+    setSharedDeleting(cat.id)
+    try {
+      await deleteSharedCategory(cat.id)
+      setSharedCats((prev) => prev.filter((c) => c.id !== cat.id))
+      toast('Categoria excluída.')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir.', { type: 'error' })
+    } finally {
+      setSharedDeleting(null)
+    }
+  }
+
   const loading = unifiedMode ? sharedLoading : personalLoading
   const displayCount = unifiedMode ? sharedCats.length : categories.length
 
@@ -163,7 +212,12 @@ export default function CategoriesPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {unifiedMode
               ? sharedCats.map((cat) => (
-                  <SharedCategoryCard key={cat.id} cat={cat} />
+                  <SharedCategoryCard
+                    key={cat.id} cat={cat}
+                    isDeleting={sharedDeleting === cat.id}
+                    onEdit={() => openEditShared(cat)}
+                    onDelete={() => handleSharedDelete(cat)}
+                  />
                 ))
               : categories.map((cat) => (
                   <CategoryCard
@@ -177,6 +231,47 @@ export default function CategoriesPage() {
           </div>
         </>
       )}
+
+      {/* Form Modal — shared category edit */}
+      <Modal open={sharedFormOpen} onClose={() => setSharedFormOpen(false)} title="Editar Categoria Compartilhada">
+        <form onSubmit={handleSharedSubmit} className="flex flex-col gap-4">
+          <Input label="Nome" placeholder="Ex: Alimentação" value={sharedForm.name}
+            onChange={(e) => setSharedForm((f) => ({ ...f, name: e.target.value }))} required maxLength={60} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>Tipo</label>
+            <div className="flex gap-2">
+              {(['expense', 'income', 'both'] as const).map((t) => (
+                <button key={t} type="button" onClick={() => setSharedForm((f) => ({ ...f, type: t }))} style={segBtnStyle(sharedForm.type === t)}>
+                  {t === 'expense' ? 'Despesa' : t === 'income' ? 'Receita' : 'Ambos'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>Cor</label>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((c) => (
+                <button key={c} type="button" onClick={() => setSharedForm((f) => ({ ...f, color: c }))}
+                  className="w-7 h-7 rounded-lg border-2 transition-transform hover:scale-110"
+                  style={{ background: c, borderColor: sharedForm.color === c ? '#fff' : 'transparent' }} />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-8 h-8 rounded-[10px] flex-shrink-0"
+                style={{ background: sharedForm.color, boxShadow: `0 0 12px ${sharedForm.color}55` }} />
+              <input value={sharedForm.color} onChange={(e) => setSharedForm((f) => ({ ...f, color: e.target.value }))}
+                className="rounded-xl px-3 py-2 text-sm w-28 outline-none font-mono"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+                placeholder="#RRGGBB" />
+            </div>
+          </div>
+          {sharedFormError && <p className="text-xs" style={{ color: 'var(--red)' }}>{sharedFormError}</p>}
+          <div className="flex gap-3 pt-1">
+            <Button type="button" variant="secondary" onClick={() => setSharedFormOpen(false)} className="flex-1">Cancelar</Button>
+            <Button type="submit" loading={sharedSaving} className="flex-[2]">Salvar</Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Form Modal (personal only) */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? 'Editar Categoria' : 'Nova Categoria'}>
@@ -256,7 +351,9 @@ function CategoryCard({ cat, isDeleting, onEdit, onDelete }: {
   )
 }
 
-function SharedCategoryCard({ cat }: { cat: SharedCategory }) {
+function SharedCategoryCard({ cat, isDeleting, onEdit, onDelete }: {
+  cat: SharedCategory; isDeleting: boolean; onEdit: () => void; onDelete: () => void
+}) {
   const typeColor: Record<string, string> = { expense: 'var(--red)', income: 'var(--green)', both: 'var(--blue)' }
   const typeLabel: Record<string, string> = { expense: 'Despesa', income: 'Receita', both: 'Ambos' }
   return (
@@ -271,7 +368,18 @@ function SharedCategoryCard({ cat }: { cat: SharedCategory }) {
           <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-1)' }}>{cat.name}</div>
           <span className="text-[10px] font-medium" style={{ color: typeColor[cat.type] }}>{typeLabel[cat.type]}</span>
         </div>
-        <Lock size={10} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+      </div>
+      <div className="flex gap-1.5">
+        <button onClick={onEdit}
+          className="flex-1 h-7 rounded-[8px] flex items-center justify-center gap-1.5 text-[10px] font-medium transition-opacity hover:opacity-70"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-2)' }}>
+          <Edit2 size={10} /> Editar
+        </button>
+        <button onClick={onDelete} disabled={isDeleting}
+          className="flex-1 h-7 rounded-[8px] flex items-center justify-center gap-1.5 text-[10px] font-medium transition-opacity hover:opacity-70 disabled:opacity-30"
+          style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.15)', color: '#f87171' }}>
+          <Trash2 size={10} /> Excluir
+        </button>
       </div>
     </div>
   )

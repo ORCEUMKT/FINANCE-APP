@@ -436,6 +436,28 @@ export async function getSharedCategories(sharedAccountId: string): Promise<Shar
   return (data ?? []) as SharedCategory[]
 }
 
+export async function updateSharedCategory(
+  id: string,
+  data: Partial<Pick<SharedCategory, 'name' | 'color' | 'icon' | 'type'>>
+): Promise<SharedCategory> {
+  const supabase = db()
+  const { data: result, error } = await supabase
+    .from('shared_categories')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return result as SharedCategory
+}
+
+export async function deleteSharedCategory(id: string): Promise<void> {
+  const supabase = db()
+  await supabase.from('shared_goals').delete().eq('shared_category_id', id)
+  const { error } = await supabase.from('shared_categories').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function getSharedGoals(sharedAccountId: string): Promise<SharedGoal[]> {
   const supabase = db()
   const { data, error } = await supabase
@@ -444,4 +466,29 @@ export async function getSharedGoals(sharedAccountId: string): Promise<SharedGoa
     .eq('shared_account_id', sharedAccountId)
   if (error) throw error
   return (data ?? []) as unknown as SharedGoal[]
+}
+
+export async function upsertSharedGoal(
+  sharedAccountId: string,
+  sharedCategoryId: string,
+  amount: number
+): Promise<SharedGoal> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('shared_goals')
+    .upsert(
+      { shared_account_id: sharedAccountId, shared_category_id: sharedCategoryId, amount, period: 'monthly', created_from_user_id: user?.id },
+      { onConflict: 'shared_account_id,shared_category_id' }
+    )
+    .select('*, shared_category:shared_categories(*)')
+    .single()
+  if (error) throw error
+  return data as unknown as SharedGoal
+}
+
+export async function deleteSharedGoal(id: string): Promise<void> {
+  const supabase = db()
+  const { error } = await supabase.from('shared_goals').delete().eq('id', id)
+  if (error) throw error
 }
