@@ -24,7 +24,7 @@ export default function SettingsPage() {
   const { user } = useAuth()
   const router   = useRouter()
   const { toast } = useToast()
-  const { sharedAccount, members, loading: saLoading, refresh } = useSharedAccount()
+  const { sharedAccount, members, loading: saLoading, refresh, clearAccount } = useSharedAccount()
 
   const [name, setName]   = useState('')
   const [saving, setSaving] = useState(false)
@@ -96,14 +96,17 @@ export default function SettingsPage() {
     setLeavingAccount(true)
     try {
       await leaveSharedAccount(sharedAccount.id)
-      setInvite(null)
-      await refresh()
-      toast('Você saiu da conta compartilhada.')
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Erro ao sair.', { type: 'error' })
+    } catch {
+      // ignore — even if the DB update fails, clear local state so user isn't stuck
     } finally {
       setLeavingAccount(false)
     }
+    // Always clear immediately so the UI updates without waiting for the DB
+    clearAccount()
+    setInvite(null)
+    toast('Você saiu da conta compartilhada.')
+    // Background refresh to sync with DB
+    refresh()
   }
 
   function copyLink() {

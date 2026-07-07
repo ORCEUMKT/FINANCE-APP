@@ -20,6 +20,7 @@ interface SharedAccountCtx {
   loading: boolean
   needsCategorySetup: boolean
   markSetupDone: () => void
+  clearAccount: () => void
   refresh: () => void
 }
 
@@ -34,6 +35,7 @@ const SharedAccountContext = createContext<SharedAccountCtx>({
   loading: true,
   needsCategorySetup: false,
   markSetupDone: () => {},
+  clearAccount: () => {},
   refresh: () => {},
 })
 
@@ -123,6 +125,15 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function clearAccount() {
+    setSharedAccount(null)
+    setMembers([])
+    setMyMembership(null)
+    setNeedsCategorySetup(false)
+    setUnifiedModeState(false)
+    setFilterUserIdState(null)
+  }
+
   function markSetupDone() {
     if (sharedAccount) {
       localStorage.setItem(`shared_setup_done_${sharedAccount.id}`, '1')
@@ -142,6 +153,7 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
       loading,
       needsCategorySetup,
       markSetupDone,
+      clearAccount,
       refresh: load,
     }}>
       {children}
