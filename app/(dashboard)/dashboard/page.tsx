@@ -155,6 +155,9 @@ export default function DashboardPage() {
       ═══════════════════════════════════════ */}
       <div className="lg:hidden flex flex-col gap-5 pb-4">
 
+        {/* Account selector — first on mobile */}
+        {AccountSelector}
+
         {/* Month selector + actions */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -172,9 +175,6 @@ export default function DashboardPage() {
           </div>
           <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
         </div>
-
-        {/* Account selector */}
-        {AccountSelector}
 
         {/* Tab toggle */}
         <div className="flex gap-1 p-1 rounded-[14px]" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>

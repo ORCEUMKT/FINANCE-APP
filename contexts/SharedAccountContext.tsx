@@ -60,6 +60,23 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
         setMembers(ms)
         setMyMembership(ms.find((m) => m.user_id === user.id) ?? null)
 
+        if (ms.length >= 2) {
+          // Restore persisted mode; default to unified when account has 2+ members
+          const savedMode = localStorage.getItem(`unified_mode_${account.id}`)
+          if (savedMode !== null) {
+            setUnifiedModeState(savedMode === 'true')
+            const savedFilter = localStorage.getItem(`filter_user_${account.id}`)
+            setFilterUserIdState(savedFilter ?? null)
+          } else {
+            setUnifiedModeState(true)
+            localStorage.setItem(`unified_mode_${account.id}`, 'true')
+          }
+        } else {
+          setUnifiedModeState(false)
+          setFilterUserIdState(null)
+        }
+
+        // Check if owner needs to configure shared categories
         const isOwner = account.created_by === user.id
         const hasEnoughMembers = ms.length >= 2
         const setupDoneKey = `shared_setup_done_${account.id}`
@@ -92,10 +109,18 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
     if (!sharedAccount && v) return
     setUnifiedModeState(v)
     if (!v) setFilterUserIdState(null)
+    if (sharedAccount) {
+      localStorage.setItem(`unified_mode_${sharedAccount.id}`, String(v))
+      if (!v) localStorage.removeItem(`filter_user_${sharedAccount.id}`)
+    }
   }
 
   function setFilterUserId(id: string | null) {
     setFilterUserIdState(id)
+    if (sharedAccount) {
+      if (id) localStorage.setItem(`filter_user_${sharedAccount.id}`, id)
+      else localStorage.removeItem(`filter_user_${sharedAccount.id}`)
+    }
   }
 
   function markSetupDone() {
