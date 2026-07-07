@@ -76,10 +76,20 @@ export async function createSharedAccount(name = 'Conta Compartilhada'): Promise
 
 export async function leaveSharedAccount(sharedAccountId: string): Promise<void> {
   const supabase = db()
-  // SECURITY DEFINER RPC dissolves the account for ALL members, not just the current user
-  const { error } = await supabase.rpc('leave_shared_account_cascade', {
+  // Try cascade RPC first (dissolves for all members)
+  const { error: rpcErr } = await supabase.rpc('leave_shared_account_cascade', {
     p_shared_account_id: sharedAccountId,
   })
+  if (!rpcErr) return
+
+  // Fallback: leave only own membership (works without the cascade SQL function)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+  const { error } = await supabase
+    .from('shared_account_members')
+    .update({ status: 'left' })
+    .eq('shared_account_id', sharedAccountId)
+    .eq('user_id', user.id)
   if (error) throw error
 }
 
