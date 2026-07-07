@@ -16,7 +16,7 @@ interface Props {
 
 export function AccountViewSelector({ options, activeKey, onChange }: Props) {
   const [open, setOpen] = useState(false)
-  const [side, setSide] = useState<'left' | 'right'>('left')
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 })
   const ref = useRef<HTMLDivElement>(null)
 
   const activeLabel = options.find((o) => o.key === activeKey)?.label ?? options[0]?.label
@@ -32,8 +32,10 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
   function handleToggle() {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect()
-      // Open to the right if there's room (≥160px), otherwise open to the left
-      setSide(window.innerWidth - rect.right >= 160 ? 'left' : 'right')
+      const dropWidth = 180
+      // Clamp so dropdown never overflows the right edge
+      const left = Math.min(rect.left, window.innerWidth - dropWidth - 8)
+      setDropPos({ top: rect.bottom + 6, left: Math.max(left, 8) })
     }
     setOpen((v) => !v)
   }
@@ -63,9 +65,10 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
 
       {open && (
         <div
-          className="absolute top-full mt-1.5 min-w-[160px] rounded-2xl overflow-hidden z-50"
+          className="fixed min-w-[180px] rounded-2xl overflow-hidden z-[999]"
           style={{
-            [side === 'left' ? 'left' : 'right']: 0,
+            top: dropPos.top,
+            left: dropPos.left,
             background: 'var(--surface)',
             border: '1px solid var(--border-md)',
             boxShadow: 'var(--shadow-elevated)',
