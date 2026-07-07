@@ -1,134 +1,91 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Users, Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Users, Check, ChevronDown } from 'lucide-react'
 
-interface ViewOption {
-  key: string
-  label: string
-}
-
-interface Props {
-  options: ViewOption[]
-  activeKey: string
-  onChange: (key: string) => void
-}
+interface ViewOption { key: string; label: string }
+interface Props { options: ViewOption[]; activeKey: string; onChange: (key: string) => void }
 
 export function AccountViewSelector({ options, activeKey, onChange }: Props) {
   const currentIndex = options.findIndex((o) => o.key === activeKey)
+  const activeLabel  = options[currentIndex]?.label ?? options[0]?.label
 
   // ── Desktop dropdown ────────────────────────────────────────────────────────
   const [open, setOpen] = useState(false)
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 })
   const ref = useRef<HTMLDivElement>(null)
 
-  const activeLabel = options[currentIndex]?.label ?? options[0]?.label
-
   useEffect(() => {
-    function handleOutside(e: MouseEvent) {
+    function out(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    if (open) document.addEventListener('mousedown', handleOutside)
-    return () => document.removeEventListener('mousedown', handleOutside)
+    if (open) document.addEventListener('mousedown', out)
+    return () => document.removeEventListener('mousedown', out)
   }, [open])
 
   function handleClick() {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect()
-      const dropWidth = 180
-      const left = Math.min(rect.left, window.innerWidth - dropWidth - 8)
-      setDropPos({ top: rect.bottom + 6, left: Math.max(left, 8) })
-    }
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const w = 180
+    const left = Math.min(rect.left, window.innerWidth - w - 8)
+    setDropPos({ top: rect.bottom + 6, left: Math.max(left, 8) })
     setOpen((v) => !v)
   }
 
-  // ── Mobile swipe ────────────────────────────────────────────────────────────
-  const [touchStartX, setTouchStartX] = useState<number | null>(null)
-  const [dragDelta, setDragDelta] = useState(0)
-  const THRESHOLD = 40
+  // ── Mobile press-and-drag picker ────────────────────────────────────────────
+  const [pressing, setPressing]       = useState(false)
+  const [hoverIdx, setHoverIdx]       = useState(currentIndex)
+  const [overlayTop, setOverlayTop]   = useState(0)
+  const optionsRef = useRef<HTMLDivElement>(null)
 
   function onTouchStart(e: React.TouchEvent) {
-    setTouchStartX(e.touches[0].clientX)
-    setDragDelta(0)
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    setOverlayTop(rect.bottom + 10)
+    setHoverIdx(currentIndex)
+    setPressing(true)
   }
 
   function onTouchMove(e: React.TouchEvent) {
-    if (touchStartX === null) return
-    setDragDelta(e.touches[0].clientX - touchStartX)
+    if (!pressing || !optionsRef.current) return
+    const touch = e.touches[0]
+    const children = Array.from(optionsRef.current.children) as HTMLElement[]
+    for (let i = 0; i < children.length; i++) {
+      const r = children[i].getBoundingClientRect()
+      if (touch.clientX >= r.left && touch.clientX <= r.right) {
+        setHoverIdx(i)
+        break
+      }
+    }
   }
 
   function onTouchEnd() {
-    if (touchStartX === null) return
-    if (dragDelta < -THRESHOLD && currentIndex < options.length - 1) {
-      onChange(options[currentIndex + 1].key)
-    } else if (dragDelta > THRESHOLD && currentIndex > 0) {
-      onChange(options[currentIndex - 1].key)
-    }
-    setTouchStartX(null)
-    setDragDelta(0)
+    if (pressing) onChange(options[hoverIdx].key)
+    setPressing(false)
   }
-
-  const hasPrev = currentIndex > 0
-  const hasNext = currentIndex < options.length - 1
-
-  // Clamp visual drag so it doesn't slide too far
-  const clampedDrag = Math.max(-32, Math.min(32, dragDelta))
 
   return (
     <div ref={ref} className="relative flex-shrink-0">
 
-      {/* ── Mobile swipe button ── */}
+      {/* ── Mobile button (same look, press-and-drag) ── */}
       <div
-        className="lg:hidden select-none touch-pan-y"
+        className="lg:hidden"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-none"
+        <button
+          className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all"
           style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border-md)',
-            transform: `translateX(${clampedDrag}px)`,
-            transition: touchStartX !== null ? 'none' : 'transform 0.2s ease',
+            background: pressing ? 'var(--accent-dim)' : 'var(--surface)',
+            color: 'var(--text-2)',
+            border: `1px solid ${pressing ? 'var(--accent)' : 'var(--border-md)'}`,
           }}
         >
           <Users size={11} style={{ color: 'var(--text-3)' }} />
-
-          {/* Prev arrow */}
-          <ChevronLeft
-            size={12}
-            style={{ color: hasPrev ? 'var(--text-3)' : 'transparent', flexShrink: 0 }}
-          />
-
-          {/* Label */}
-          <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: 'var(--text-2)', minWidth: 80, textAlign: 'center' }}>
-            {activeLabel}
-          </span>
-
-          {/* Next arrow */}
-          <ChevronRight
-            size={12}
-            style={{ color: hasNext ? 'var(--text-3)' : 'transparent', flexShrink: 0 }}
-          />
-        </div>
-
-        {/* Dot indicators */}
-        {options.length > 1 && (
-          <div className="flex justify-center gap-1 mt-1">
-            {options.map((_, i) => (
-              <span
-                key={i}
-                className="rounded-full transition-all duration-200"
-                style={{
-                  width: i === currentIndex ? 14 : 4,
-                  height: 4,
-                  background: i === currentIndex ? 'var(--accent)' : 'var(--border-md)',
-                }}
-              />
-            ))}
-          </div>
-        )}
+          {activeLabel}
+          <ChevronDown size={10} style={{ color: 'var(--text-3)' }} />
+        </button>
       </div>
 
       {/* ── Desktop dropdown button ── */}
@@ -143,17 +100,49 @@ export function AccountViewSelector({ options, activeKey, onChange }: Props) {
       >
         <Users size={11} style={{ color: 'var(--text-3)' }} />
         {activeLabel}
-        <ChevronDown
-          size={10}
-          style={{
-            color: 'var(--text-3)',
-            transform: open ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.15s',
-          }}
-        />
+        <ChevronDown size={10} style={{
+          color: 'var(--text-3)',
+          transform: open ? 'rotate(180deg)' : 'none',
+          transition: 'transform 0.15s',
+        }} />
       </button>
 
-      {/* Desktop dropdown menu */}
+      {/* ── Mobile press-and-drag overlay ── */}
+      {pressing && (
+        <div
+          className="fixed inset-0 z-[998]"
+          style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}
+        >
+          <div
+            ref={optionsRef}
+            className="absolute flex items-center gap-2 px-3 py-2 rounded-2xl"
+            style={{
+              top: overlayTop,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'var(--surface)',
+              border: '1px solid var(--border-md)',
+              boxShadow: 'var(--shadow-elevated)',
+            }}
+          >
+            {options.map((opt, i) => (
+              <div
+                key={opt.key}
+                className="px-4 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap transition-all"
+                style={{
+                  background: i === hoverIdx ? 'var(--accent)' : 'transparent',
+                  color: i === hoverIdx ? 'var(--accent-text)' : 'var(--text-3)',
+                  transform: i === hoverIdx ? 'scale(1.05)' : 'scale(1)',
+                }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Desktop dropdown menu ── */}
       {open && (
         <div
           className="fixed min-w-[180px] rounded-2xl overflow-hidden z-[999]"
