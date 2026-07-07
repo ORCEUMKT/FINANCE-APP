@@ -66,7 +66,7 @@ function TransactionsContent() {
 
   const { transactions, loading, refetch, add, update, remove, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
-  const { sharedAccount, unifiedMode, filterUserId, members, setUnifiedMode, setFilterUserId } = useSharedAccount()
+  const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId } = useSharedAccount()
 
   // Unified transactions state
   const [unifiedTxs, setUnifiedTxs]           = useState<Transaction[]>([])
@@ -164,7 +164,9 @@ function TransactionsContent() {
     ? [
         { key: 'personal', label: 'Minha conta', userId: null, unified: false },
         { key: 'all', label: 'Conta unificada', userId: null, unified: true },
-        ...members.map(m => ({ key: m.user_id, label: m.name || 'Membro', userId: m.user_id, unified: true })),
+        ...members
+          .filter((m) => m.user_id !== myMembership?.user_id)
+          .map((m) => ({ key: m.user_id, label: m.name || 'Membro', userId: m.user_id, unified: true })),
       ]
     : null
   const activeViewKey = !unifiedMode ? 'personal' : (filterUserId ?? 'all')

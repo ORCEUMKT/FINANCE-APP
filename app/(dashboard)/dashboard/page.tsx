@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const router = useRouter()
 
   const {
-    sharedAccount, members,
+    sharedAccount, members, myMembership,
     unifiedMode, filterUserId,
     setUnifiedMode, setFilterUserId,
   } = useSharedAccount()
@@ -95,7 +95,9 @@ export default function DashboardPage() {
     const opts = [
       { key: 'personal', label: 'Minha conta', userId: null, unified: false },
       { key: 'all', label: 'Conta unificada', userId: null, unified: true },
-      ...members.map((m) => ({ key: m.user_id, label: m.name || 'Membro', userId: m.user_id, unified: true })),
+      ...members
+        .filter((m) => m.user_id !== myMembership?.user_id)
+        .map((m) => ({ key: m.user_id, label: m.name || 'Membro', userId: m.user_id, unified: true })),
     ]
     return opts
   }, [sharedAccount, members])

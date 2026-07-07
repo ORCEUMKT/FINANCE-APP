@@ -212,6 +212,15 @@ export async function acceptInvite(token: string): Promise<{ sharedAccountId: st
     .eq('id', invite.id)
   if (updErr) throw updErr
 
+  // Ensure profile name is saved (syncs auth metadata → profiles for users who signed up before this was required)
+  const metaName = user.user_metadata?.name as string | undefined
+  if (metaName) {
+    const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).maybeSingle()
+    if (!profile?.name) {
+      await supabase.from('profiles').upsert({ id: user.id, name: metaName })
+    }
+  }
+
   return { sharedAccountId: invite.shared_account_id, inviterId: invite.created_by }
 }
 
