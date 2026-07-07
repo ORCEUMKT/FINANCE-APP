@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, User, Save, Users, Copy, Check, Link2, UserMinus, RefreshCw } from 'lucide-react'
+import { LogOut, User, Save, Users, Copy, Check, Link2, UserMinus, RefreshCw, Layers, Star, Shuffle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -16,9 +16,19 @@ import {
   getOrCreateInvite,
   revokeInvite,
   leaveSharedAccount,
+  setupSharedCategories,
 } from '@/services/sharedAccountService'
+import { getCategories } from '@/services/categoriesService'
+import { getGoals } from '@/services/goalsService'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import type { SharedAccountInvite } from '@/types/sharedAccount'
+import type { SharedAccountInvite, CategorySetupOption } from '@/types/sharedAccount'
+
+const SETUP_OPTIONS: { key: CategorySetupOption; icon: React.ReactNode; title: string; description: string }[] = [
+  { key: 'zero',   icon: <Star size={16} />,    title: 'Começar do zero',                      description: 'Criar sem categorias ou metas. Configure manualmente depois.' },
+  { key: 'mine',   icon: <Layers size={16} />,  title: 'Usar minhas categorias e metas',       description: 'Copiar minhas categorias e metas como base da conta compartilhada.' },
+  { key: 'theirs', icon: <RefreshCw size={16} />, title: 'Usar categorias do outro membro',    description: 'Copiar as categorias e metas da outra pessoa. Aplicado quando ele aceitar.' },
+  { key: 'merge',  icon: <Shuffle size={16} />, title: 'Unificar categorias dos dois',         description: 'Juntar as categorias de ambos, evitando duplicatas. Aplicado quando ele aceitar.' },
+]
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -33,6 +43,11 @@ export default function SettingsPage() {
   const [loadingInvite, setLoadingInvite] = useState(false)
   const [copied, setCopied]           = useState(false)
   const [leavingAccount, setLeavingAccount] = useState(false)
+
+  // Setup picker (shown before invite is generated)
+  const [setupOpen, setSetupOpen]       = useState(false)
+  const [setupOption, setSetupOption]   = useState<CategorySetupOption>('zero')
+  const [setupLoading, setSetupLoading] = useState(false)
 
   // Refresh shared account data on every visit to settings (catches changes made by the other member)
   useEffect(() => { refresh() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,21 +78,42 @@ export default function SettingsPage() {
     router.push('/login')
   }
 
-  async function handleCreateInvite() {
-    setLoadingInvite(true)
+  // Step 1: open setup picker
+  function handleCreateInvite() {
+    setSetupOption('zero')
+    setSetupOpen(true)
+  }
+
+  // Step 2: confirm setup → create account + apply config → generate invite
+  async function handleSetupConfirm() {
+    setSetupLoading(true)
     try {
       let account = sharedAccount
       if (!account) {
         account = await createSharedAccount()
-        // Don't call refresh() here — it would flip the component to the
-        // "1 active member" state which previously showed "O outro membro saiu" incorrectly
       }
+
+      const supabase = createClient()
+      const { data: { user: me } } = await supabase.auth.getUser()
+
+      if (setupOption === 'zero') {
+        localStorage.setItem(`shared_setup_done_${account.id}`, '1')
+      } else if (setupOption === 'mine') {
+        const [cats, goals] = await Promise.all([getCategories(), getGoals()])
+        await setupSharedCategories(account.id, 'mine', me!.id, '', cats, goals)
+        localStorage.setItem(`shared_setup_done_${account.id}`, '1')
+      } else {
+        // 'theirs' or 'merge' — store and apply automatically when partner accepts
+        localStorage.setItem(`shared_setup_pending_${account.id}`, setupOption)
+      }
+
       const inv = await getOrCreateInvite(account.id)
       setInvite(inv)
+      setSetupOpen(false)
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Erro ao gerar convite.', { type: 'error' })
     } finally {
-      setLoadingInvite(false)
+      setSetupLoading(false)
     }
   }
 
@@ -274,6 +310,47 @@ export default function SettingsPage() {
           <LogOut size={13} /> Sair da conta
         </Button>
       </Card>
+
+      {/* Setup picker overlay */}
+      {setupOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-md rounded-2xl p-7"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border-md)' }}>
+            <h2 className="text-[17px] font-bold mb-1" style={{ color: 'var(--text-1)' }}>
+              Configurar Conta Compartilhada
+            </h2>
+            <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-3)' }}>
+              Escolha como organizar as categorias e metas antes de enviar o convite.
+            </p>
+            <div className="flex flex-col gap-2 mb-5">
+              {SETUP_OPTIONS.map((opt) => (
+                <button key={opt.key} onClick={() => setSetupOption(opt.key)}
+                  className="text-left rounded-xl border px-4 py-3.5 transition-all"
+                  style={{
+                    borderColor: setupOption === opt.key ? 'var(--accent)' : 'var(--border-md)',
+                    background: setupOption === opt.key ? 'var(--accent-dim)' : 'transparent',
+                  }}>
+                  <div className="flex items-center gap-2.5 mb-1"
+                    style={{ color: setupOption === opt.key ? 'var(--accent)' : 'var(--text-2)' }}>
+                    {opt.icon}
+                    <span className="text-sm font-semibold">{opt.title}</span>
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>{opt.description}</p>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="secondary" size="sm" className="flex-1" onClick={() => setSetupOpen(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" className="flex-[2]" loading={setupLoading} onClick={handleSetupConfirm}>
+                Confirmar e gerar link
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
