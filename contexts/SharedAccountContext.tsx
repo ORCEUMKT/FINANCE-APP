@@ -138,6 +138,8 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   }, [sharedAccount?.id, members.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function broadcastChange() {
+    // Update local state immediately (broadcast doesn't echo back to sender)
+    setLastSharedUpdate(Date.now())
     if (!channelRef.current) return
     channelRef.current.send({ type: 'broadcast', event: 'tx_change', payload: {} }).catch(() => {})
   }
