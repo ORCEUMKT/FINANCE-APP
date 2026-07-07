@@ -1,7 +1,12 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { getMySharedAccount, getSharedAccountMembers } from '@/services/sharedAccountService'
+import { createClient } from '@/lib/supabase/client'
+import {
+  getMySharedAccount,
+  getSharedAccountMembers,
+  countSharedCategories,
+} from '@/services/sharedAccountService'
 import type { SharedAccount, SharedAccountMemberWithProfile } from '@/types/sharedAccount'
 
 interface SharedAccountCtx {
@@ -13,6 +18,8 @@ interface SharedAccountCtx {
   setUnifiedMode: (v: boolean) => void
   setFilterUserId: (id: string | null) => void
   loading: boolean
+  needsCategorySetup: boolean
+  markSetupDone: () => void
   refresh: () => void
 }
 
@@ -25,6 +32,8 @@ const SharedAccountContext = createContext<SharedAccountCtx>({
   setUnifiedMode: () => {},
   setFilterUserId: () => {},
   loading: true,
+  needsCategorySetup: false,
+  markSetupDone: () => {},
   refresh: () => {},
 })
 
@@ -35,20 +44,37 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   const [unifiedMode, setUnifiedModeState] = useState(false)
   const [filterUserId, setFilterUserIdState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [needsCategorySetup, setNeedsCategorySetup] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
       const account = await getMySharedAccount()
       setSharedAccount(account)
-      if (account) {
+
+      if (account && user) {
         const ms = await getSharedAccountMembers(account.id)
         setMembers(ms)
-        // figure out current user from the auth — getMySharedAccount already validated membership
-        setMyMembership(ms[0] ?? null) // will be resolved when we know userId
+        setMyMembership(ms.find((m) => m.user_id === user.id) ?? null)
+
+        const isOwner = account.created_by === user.id
+        const hasEnoughMembers = ms.length >= 2
+        const setupDoneKey = `shared_setup_done_${account.id}`
+        const setupDoneInStorage = typeof window !== 'undefined' && localStorage.getItem(setupDoneKey) === '1'
+
+        if (isOwner && hasEnoughMembers && !setupDoneInStorage) {
+          const catCount = await countSharedCategories(account.id)
+          setNeedsCategorySetup(catCount === 0)
+        } else {
+          setNeedsCategorySetup(false)
+        }
       } else {
         setMembers([])
         setMyMembership(null)
+        setNeedsCategorySetup(false)
         setUnifiedModeState(false)
         setFilterUserIdState(null)
       }
@@ -72,6 +98,13 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
     setFilterUserIdState(id)
   }
 
+  function markSetupDone() {
+    if (sharedAccount) {
+      localStorage.setItem(`shared_setup_done_${sharedAccount.id}`, '1')
+    }
+    setNeedsCategorySetup(false)
+  }
+
   return (
     <SharedAccountContext.Provider value={{
       sharedAccount,
@@ -82,6 +115,8 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
       setUnifiedMode,
       setFilterUserId,
       loading,
+      needsCategorySetup,
+      markSetupDone,
       refresh: load,
     }}>
       {children}

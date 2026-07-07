@@ -364,6 +364,17 @@ export async function getSharedTransactions(
   return (data ?? []) as unknown as Transaction[]
 }
 
+// ─── Category setup check ────────────────────────────────────────────────────
+
+export async function countSharedCategories(sharedAccountId: string): Promise<number> {
+  const supabase = db()
+  const { count } = await supabase
+    .from('shared_categories')
+    .select('*', { count: 'exact', head: true })
+    .eq('shared_account_id', sharedAccountId)
+  return count ?? 0
+}
+
 // ─── Shared categories & goals (for unified goals view) ──────────────────────
 
 export async function getSharedCategories(sharedAccountId: string): Promise<SharedCategory[]> {
