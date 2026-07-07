@@ -97,16 +97,15 @@ export default function SettingsPage() {
     try {
       await leaveSharedAccount(sharedAccount.id)
     } catch {
-      // ignore — even if the DB update fails, clear local state so user isn't stuck
+      // ignore
     } finally {
       setLeavingAccount(false)
     }
-    // Always clear immediately so the UI updates without waiting for the DB
+    // Clear local state immediately — do NOT call refresh() here,
+    // it would re-fetch from DB and undo the clear if the DB update hasn't propagated
     clearAccount()
     setInvite(null)
     toast('Você saiu da conta compartilhada.')
-    // Background refresh to sync with DB
-    refresh()
   }
 
   function copyLink() {
