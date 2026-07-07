@@ -101,6 +101,15 @@ export async function getSharedAccountMembers(sharedAccountId: string): Promise<
       .select('id, name')
       .in('id', userIds)
     ;(profiles ?? []).forEach((p: { id: string; name: string | null }) => nameMap.set(p.id, p.name))
+
+    // Fallback via RPC for users whose profile name is still null
+    const missingIds = userIds.filter((id) => !nameMap.get(id))
+    if (missingIds.length > 0) {
+      const { data: authNames } = await supabase.rpc('get_users_names', { p_user_ids: missingIds })
+      ;(authNames ?? []).forEach((u: { id: string; name: string }) => {
+        if (!nameMap.get(u.id)) nameMap.set(u.id, u.name)
+      })
+    }
   }
 
   return rows.map((r) => ({ ...r, name: nameMap.get(r.user_id) ?? null, email: null }))
