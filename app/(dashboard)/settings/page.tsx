@@ -69,7 +69,8 @@ export default function SettingsPage() {
       let account = sharedAccount
       if (!account) {
         account = await createSharedAccount()
-        await refresh()
+        // Don't call refresh() here — it would flip the component to the
+        // "1 active member" state which previously showed "O outro membro saiu" incorrectly
       }
       const inv = await getOrCreateInvite(account.id)
       setInvite(inv)
@@ -121,6 +122,9 @@ export default function SettingsPage() {
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/convite-conta-compartilhada/${invite.token}`
     : ''
 
+  // Solo = account exists but no partner (awaiting invite or partner left)
+  const isSolo = !!sharedAccount && members.length < 2
+
   return (
     <div className="flex flex-col gap-5 max-w-lg">
       <div>
@@ -160,16 +164,25 @@ export default function SettingsPage() {
             <div className="h-3 w-48 rounded bg-white/[.06] animate-pulse" />
             <div className="h-3 w-32 rounded bg-white/[.06] animate-pulse" />
           </div>
-        ) : !sharedAccount ? (
-          /* No shared account */
+        ) : (!sharedAccount || isSolo) ? (
+          /* No account, OR account exists but no partner yet (fresh or partner left) */
           <>
-            <p className="text-sm text-white/50 mt-3 mb-4 leading-relaxed">
-              Conecte sua conta com outra pessoa para visualizar uma visão financeira unificada, mantendo os lançamentos individuais de cada usuário.
-            </p>
+            {isSolo ? (
+              <div className="mt-3 mb-4 rounded-xl border border-amber-500/20 bg-amber-500/[.06] px-4 py-3">
+                <p className="text-xs text-amber-400/90 font-semibold mb-1">Nenhum parceiro ativo</p>
+                <p className="text-xs text-white/40 leading-relaxed">
+                  Gere um novo convite para adicionar um parceiro, ou saia para encerrar a conta.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-white/50 mt-3 mb-4 leading-relaxed">
+                Conecte sua conta com outra pessoa para visualizar uma visão financeira unificada, mantendo os lançamentos individuais de cada usuário.
+              </p>
+            )}
 
             {!invite ? (
               <Button size="sm" className="gap-1.5" loading={loadingInvite} onClick={handleCreateInvite}>
-                <Link2 size={13} /> Criar link de convite
+                <Link2 size={13} /> {isSolo ? 'Gerar novo convite' : 'Criar link de convite'}
               </Button>
             ) : (
               <div className="flex flex-col gap-3">
@@ -187,19 +200,12 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-          </>
-        ) : members.length < 2 ? (
-          /* Partner left — orphaned account */
-          <>
-            <div className="mt-3 mb-4 rounded-xl border border-amber-500/20 bg-amber-500/[.06] px-4 py-3">
-              <p className="text-xs text-amber-400/90 font-semibold mb-1">O outro membro saiu da conta</p>
-              <p className="text-xs text-white/40 leading-relaxed">
-                Esta conta compartilhada não tem mais parceiro. Você pode sair para encerrar a conexão.
-              </p>
-            </div>
-            <Button size="sm" variant="ghost" className="gap-1.5 text-red-400 hover:text-red-300" loading={leavingAccount} onClick={handleLeave}>
-              <UserMinus size={13} /> Sair da conta compartilhada
-            </Button>
+
+            {isSolo && (
+              <Button size="sm" variant="ghost" className="gap-1.5 mt-2 text-red-400 hover:text-red-300" loading={leavingAccount} onClick={handleLeave}>
+                <UserMinus size={13} /> Sair da conta compartilhada
+              </Button>
+            )}
           </>
         ) : (
           /* Has shared account with 2 members */
