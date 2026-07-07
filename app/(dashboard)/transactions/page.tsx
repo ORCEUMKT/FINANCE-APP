@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Plus, Search, X, SlidersHorizontal, Users } from 'lucide-react'
+import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
+import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
@@ -185,15 +186,11 @@ function TransactionsContent() {
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {viewOptions && (
-            <div className="flex items-center gap-1.5">
-              <Users size={12} style={{ color: 'var(--text-3)' }} />
-              {viewOptions.map((opt) => (
-                <button key={opt.key} onClick={() => selectView(opt.key)} className="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition-all"
-                  style={{ background: activeViewKey === opt.key ? 'var(--accent)' : 'var(--surface)', color: activeViewKey === opt.key ? 'var(--accent-text)' : 'var(--text-3)', border: `1px solid ${activeViewKey === opt.key ? 'var(--accent)' : 'var(--border)'}` }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <AccountViewSelector
+              options={viewOptions}
+              activeKey={activeViewKey}
+              onChange={selectView}
+            />
           )}
           <MonthPicker value={selectedMonth} onChange={applyMonth} />
           <VoiceMicButton

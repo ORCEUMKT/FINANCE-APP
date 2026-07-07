@@ -16,6 +16,7 @@ import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
+import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
 import { ABCSection } from '@/components/dashboard/ABCSection'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -137,25 +138,12 @@ export default function DashboardPage() {
     )
   }
 
-  // Account selector pill row
   const AccountSelector = viewOptions ? (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-shrink-0">
-      <Users size={12} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
-      {viewOptions.map((opt) => (
-        <button
-          key={opt.key}
-          onClick={() => selectView(opt.key)}
-          className="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition-all"
-          style={{
-            background: activeViewKey === opt.key ? 'var(--accent)' : 'var(--surface)',
-            color: activeViewKey === opt.key ? 'var(--accent-text)' : 'var(--text-3)',
-            border: `1px solid ${activeViewKey === opt.key ? 'var(--accent)' : 'var(--border)'}`,
-          }}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
+    <AccountViewSelector
+      options={viewOptions}
+      activeKey={activeViewKey}
+      onChange={selectView}
+    />
   ) : null
 
   return (
