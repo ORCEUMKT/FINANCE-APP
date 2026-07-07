@@ -51,6 +51,14 @@ export async function createSharedAccount(name = 'Conta Compartilhada'): Promise
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
 
+  const { data: alreadyMember } = await supabase
+    .from('shared_account_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle()
+  if (alreadyMember) throw new Error('Você já faz parte de uma conta compartilhada.')
+
   const { data: account, error: accErr } = await supabase
     .from('shared_accounts')
     .insert({ name, created_by: user.id })
@@ -121,6 +129,13 @@ export async function getOrCreateInvite(sharedAccountId: string): Promise<Shared
   const supabase = db()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
+
+  const { count: memberCount } = await supabase
+    .from('shared_account_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('shared_account_id', sharedAccountId)
+    .eq('status', 'active')
+  if ((memberCount ?? 0) >= 2) throw new Error('Esta conta compartilhada já está completa (máximo 2 membros).')
 
   const { data: existing } = await supabase
     .from('shared_account_invites')
@@ -202,13 +217,22 @@ export async function acceptInvite(token: string): Promise<{ sharedAccountId: st
   if (new Date(invite.expires_at) < new Date()) throw new Error('Convite expirado')
   if (invite.created_by === user.id) throw new Error('Você não pode aceitar seu próprio convite')
 
-  const { data: existing } = await supabase
+  // Block if invitee is already in any shared account
+  const { data: anyMembership } = await supabase
     .from('shared_account_members')
     .select('id')
-    .eq('shared_account_id', invite.shared_account_id)
     .eq('user_id', user.id)
+    .eq('status', 'active')
     .maybeSingle()
-  if (existing) throw new Error('Você já faz parte desta conta compartilhada')
+  if (anyMembership) throw new Error('Você já faz parte de uma conta compartilhada. Saia dela antes de aceitar outro convite.')
+
+  // Block if target account already has 2 members
+  const { count: memberCount } = await supabase
+    .from('shared_account_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('shared_account_id', invite.shared_account_id)
+    .eq('status', 'active')
+  if ((memberCount ?? 0) >= 2) throw new Error('Esta conta compartilhada já está completa.')
 
   const { error: memErr } = await supabase
     .from('shared_account_members')

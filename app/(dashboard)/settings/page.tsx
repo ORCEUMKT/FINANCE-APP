@@ -210,7 +210,11 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              {!invite ? (
+              {members.length >= 2 ? (
+                <p className="text-xs text-white/40 leading-relaxed">
+                  Conta completa — máximo de 2 membros atingido.
+                </p>
+              ) : !invite ? (
                 <Button size="sm" variant="ghost" className="gap-1.5" loading={loadingInvite} onClick={handleCreateInvite}>
                   <RefreshCw size={13} /> Gerar novo convite
                 </Button>
