@@ -49,8 +49,8 @@ const TYPES = [
 ] as const
 
 const STATUSES = [
-  { value: 'paid',    label: 'Pago' },
   { value: 'pending', label: 'Pendente' },
+  { value: 'paid',    label: 'Pago' },
 ] as const
 
 function CascadeDateDialog({
@@ -135,7 +135,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
   const [date, setDate]                 = useState('')
   const [categoryId, setCategoryId]     = useState<string>('')
   const [type, setType]                 = useState<'expense' | 'income' | 'recover'>('expense')
-  const [status, setStatus]             = useState<'paid' | 'pending' | 'recoverable'>('paid')
+  const [status, setStatus]             = useState<'paid' | 'pending' | 'recoverable'>('pending')
   const [notes, setNotes]               = useState('')
   const [installments, setInstallments] = useState(1)
   const [errors, setErrors]             = useState<FieldError[]>([])
@@ -167,7 +167,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         setValue(prefill?.value ? String(prefill.value) : '')
         setDate(prefill?.date ?? new Date().toISOString().slice(0, 10))
         setType((prefill?.type as 'expense' | 'income' | 'recover') ?? 'expense')
-        setStatus((prefill?.status as 'paid' | 'pending') ?? 'paid')
+        setStatus((prefill?.status as 'paid' | 'pending') ?? 'pending')
         setNotes(prefill?.notes ?? '')
         setInstallments(prefill?.installments ?? 1)
         const catId = prefill?.category_name
