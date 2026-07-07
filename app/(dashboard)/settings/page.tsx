@@ -34,6 +34,9 @@ export default function SettingsPage() {
   const [copied, setCopied]           = useState(false)
   const [leavingAccount, setLeavingAccount] = useState(false)
 
+  // Refresh shared account data on every visit to settings (catches changes made by the other member)
+  useEffect(() => { refresh() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!user) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -183,8 +186,21 @@ export default function SettingsPage() {
               </div>
             )}
           </>
+        ) : members.length < 2 ? (
+          /* Partner left — orphaned account */
+          <>
+            <div className="mt-3 mb-4 rounded-xl border border-amber-500/20 bg-amber-500/[.06] px-4 py-3">
+              <p className="text-xs text-amber-400/90 font-semibold mb-1">O outro membro saiu da conta</p>
+              <p className="text-xs text-white/40 leading-relaxed">
+                Esta conta compartilhada não tem mais parceiro. Você pode sair para encerrar a conexão.
+              </p>
+            </div>
+            <Button size="sm" variant="ghost" className="gap-1.5 text-red-400 hover:text-red-300" loading={leavingAccount} onClick={handleLeave}>
+              <UserMinus size={13} /> Sair da conta compartilhada
+            </Button>
+          </>
         ) : (
-          /* Has shared account */
+          /* Has shared account with 2 members */
           <>
             <div className="mt-3 mb-4">
               <p className="text-sm font-semibold text-white/80 mb-3">{sharedAccount.name}</p>
