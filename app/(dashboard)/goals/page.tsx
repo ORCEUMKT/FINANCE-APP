@@ -67,8 +67,8 @@ export default function GoalsPage() {
   // Account view options
   const viewOptions = sharedAccount && members.length >= 2
     ? [
-        { key: 'personal', label: 'Minha conta', unified: false },
         { key: 'all', label: 'Conta unificada', unified: true },
+        { key: 'personal', label: 'Minha conta', unified: false },
         ...members
           .filter((m) => m.user_id !== myMembership?.user_id)
           .map((m) => ({ key: m.user_id, label: m.name || 'Membro', unified: true })),
