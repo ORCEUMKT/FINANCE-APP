@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { TrendingDown, TrendingUp, RotateCcw, Activity, Plus, BarChart2, Users } from 'lucide-react'
@@ -43,6 +43,7 @@ export default function DashboardPage() {
     sharedAccount, members, myMembership,
     unifiedMode, filterUserId,
     setUnifiedMode, setFilterUserId,
+    lastSharedUpdate, broadcastChange,
   } = useSharedAccount()
 
   const { metrics: unifiedMetrics, loading: unifiedLoading, refetch: unifiedRefetch, error: unifiedError } = useUnifiedDashboardMetrics(
@@ -56,6 +57,10 @@ export default function DashboardPage() {
   const loading  = unifiedMode ? unifiedLoading  : personalLoading
   const refetch  = unifiedMode ? unifiedRefetch  : personalRefetch
 
+  // Re-fetch unified metrics when partner makes a change (real-time broadcast)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (lastSharedUpdate && unifiedMode) unifiedRefetch() }, [lastSharedUpdate])
+
   const [formOpen, setFormOpen]         = useState(false)
   const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
   const [activeTab, setActiveTab]       = useState<'overview' | 'abc'>('overview')
@@ -68,6 +73,7 @@ export default function DashboardPage() {
   async function handleSubmit(data: TransactionInsert) {
     await createTransaction(data)
     toast('Lançamento adicionado!')
+    broadcastChange()
     await refetch()
   }
 

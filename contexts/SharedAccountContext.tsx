@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getMySharedAccount,
@@ -22,6 +22,8 @@ interface SharedAccountCtx {
   markSetupDone: () => void
   clearAccount: () => void
   refresh: () => void
+  lastSharedUpdate: number
+  broadcastChange: () => void
 }
 
 const SharedAccountContext = createContext<SharedAccountCtx>({
@@ -37,6 +39,8 @@ const SharedAccountContext = createContext<SharedAccountCtx>({
   markSetupDone: () => {},
   clearAccount: () => {},
   refresh: () => {},
+  lastSharedUpdate: 0,
+  broadcastChange: () => {},
 })
 
 export function SharedAccountProvider({ children }: { children: ReactNode }) {
@@ -47,6 +51,9 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   const [filterUserId, setFilterUserIdState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsCategorySetup, setNeedsCategorySetup] = useState(false)
+  const [lastSharedUpdate, setLastSharedUpdate] = useState(0)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const channelRef = useRef<any>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -107,6 +114,34 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
+  // Real-time broadcast channel — notifies partner of transaction changes
+  useEffect(() => {
+    if (!sharedAccount || members.length < 2) {
+      if (channelRef.current) {
+        channelRef.current.unsubscribe()
+        channelRef.current = null
+      }
+      return
+    }
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`shared:${sharedAccount.id}`)
+      .on('broadcast', { event: 'tx_change' }, () => {
+        setLastSharedUpdate(Date.now())
+      })
+      .subscribe()
+    channelRef.current = channel
+    return () => {
+      channel.unsubscribe()
+      channelRef.current = null
+    }
+  }, [sharedAccount?.id, members.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function broadcastChange() {
+    if (!channelRef.current) return
+    channelRef.current.send({ type: 'broadcast', event: 'tx_change', payload: {} }).catch(() => {})
+  }
+
   function setUnifiedMode(v: boolean) {
     if (!sharedAccount && v) return
     setUnifiedModeState(v)
@@ -155,6 +190,8 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
       markSetupDone,
       clearAccount,
       refresh: load,
+      lastSharedUpdate,
+      broadcastChange,
     }}>
       {children}
     </SharedAccountContext.Provider>

@@ -66,7 +66,7 @@ function TransactionsContent() {
 
   const { transactions, loading, refetch, add, update, remove, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
-  const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId } = useSharedAccount()
+  const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange } = useSharedAccount()
 
   // Unified transactions state
   const [unifiedTxs, setUnifiedTxs]           = useState<Transaction[]>([])
@@ -81,6 +81,16 @@ function TransactionsContent() {
       .catch(() => setUnifiedTxs([]))
       .finally(() => setUnifiedLoading(false))
   }, [unifiedMode, sharedAccount?.id, filterUserId, dateFrom, dateTo]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch unified transactions when partner makes a change (real-time broadcast)
+  useEffect(() => {
+    if (!lastSharedUpdate || !unifiedMode || !sharedAccount) return
+    setUnifiedLoading(true)
+    getSharedTransactions(sharedAccount.id, dateFrom || undefined, dateTo || undefined, filterUserId)
+      .then(setUnifiedTxs)
+      .catch(() => {})
+      .finally(() => setUnifiedLoading(false))
+  }, [lastSharedUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const displayTxs     = unifiedMode ? (search ? unifiedTxs.filter(t => t.description.toLowerCase().includes(search.toLowerCase())) : unifiedTxs) : transactions
@@ -100,15 +110,17 @@ function TransactionsContent() {
       await add(data)
       toast('Lançamento adicionado!')
     }
+    broadcastChange()
     setEditing(null)
     setFormOpen(false)
-  }, [editing, add, update, updateGroupDates, refetch, toast])
+  }, [editing, add, update, updateGroupDates, refetch, toast, broadcastChange])
 
   const handleDelete = useCallback(async (id: string) => {
     const tx = transactions.find((t) => t.id === id)
     if (!tx) return
     setDeletedBuffer(tx)
     await remove(id)
+    broadcastChange()
     toast('Lançamento excluído.', {
       action: {
         label: 'Desfazer',
@@ -123,16 +135,18 @@ function TransactionsContent() {
             status: deletedBuffer.status,
             notes: deletedBuffer.notes,
           })
+          broadcastChange()
           toast('Exclusão desfeita!')
         },
       },
     })
-  }, [transactions, remove, add, toast, deletedBuffer])
+  }, [transactions, remove, add, toast, deletedBuffer, broadcastChange])
 
   const handleDeleteGroup = useCallback(async (tx: Transaction) => {
     await removeGroup(tx)
+    broadcastChange()
     toast('Todas as parcelas excluídas!')
-  }, [removeGroup, toast])
+  }, [removeGroup, toast, broadcastChange])
 
   const handleDuplicate = useCallback((id: string) => {
     const tx = transactions.find((t) => t.id === id)
@@ -145,8 +159,9 @@ function TransactionsContent() {
 
   const handleMarkRecovered = useCallback(async (id: string) => {
     await markRecovered(id)
+    broadcastChange()
     toast('Marcado como recuperado!')
-  }, [markRecovered, toast])
+  }, [markRecovered, toast, broadcastChange])
 
   function clearFilters() {
     setSearch('')
