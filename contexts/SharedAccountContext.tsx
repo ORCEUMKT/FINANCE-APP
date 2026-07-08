@@ -114,6 +114,22 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
+  // Subscribe to partner joining so pending setup ('theirs'/'merge') auto-applies
+  useEffect(() => {
+    if (!sharedAccount || members.length >= 2) return
+    const supabase = createClient()
+    const ch = supabase
+      .channel(`members:${sharedAccount.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'shared_account_members',
+        filter: `shared_account_id=eq.${sharedAccount.id}`,
+      }, () => load())
+      .subscribe()
+    return () => { ch.unsubscribe() }
+  }, [sharedAccount?.id, members.length, load]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Real-time broadcast channel — notifies partner of transaction changes
   useEffect(() => {
     if (!sharedAccount || members.length < 2) {

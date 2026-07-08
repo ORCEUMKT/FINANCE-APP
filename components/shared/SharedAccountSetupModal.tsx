@@ -39,7 +39,7 @@ const SETUP_OPTIONS: { key: CategorySetupOption; icon: React.ReactNode; title: s
 ]
 
 export function SharedAccountSetupModal() {
-  const { sharedAccount, myMembership, members, needsCategorySetup, markSetupDone } = useSharedAccount()
+  const { sharedAccount, myMembership, members, needsCategorySetup, markSetupDone, broadcastChange } = useSharedAccount()
 
   const [selected, setSelected] = useState<CategorySetupOption>('zero')
   const [saving, setSaving] = useState(false)
@@ -67,6 +67,7 @@ export function SharedAccountSetupModal() {
     setAutoApplying(true)
     localStorage.removeItem(`shared_setup_pending_${sharedAccount.id}`)
     setupSharedCategories(sharedAccount.id, pending as CategorySetupOption, myMembership.user_id, invitee.user_id, myCategories, myGoals)
+      .then(() => broadcastChange())
       .catch(() => {})
       .finally(() => markSetupDone())
   }, [needsCategorySetup, sharedAccount?.id, myMembership?.user_id, loadedData, autoApplying, members]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -88,6 +89,7 @@ export function SharedAccountSetupModal() {
         myCategories,
         myGoals
       )
+      broadcastChange()
     } catch {
       // ignore errors silently — setup is best-effort
     } finally {
