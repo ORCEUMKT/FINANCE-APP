@@ -33,7 +33,7 @@ export default function GoalsPage() {
   const { sharedAccount, members, myMembership, unifiedMode, filterUserId, setUnifiedMode, setFilterUserId } = useSharedAccount()
   const { metrics: unifiedMetrics, loading: unifiedMetricsLoading } = useUnifiedDashboardMetrics(
     unifiedMode ? (sharedAccount?.id ?? null) : null,
-    null, // always show all members in goals
+    unifiedMode ? filterUserId : null, // filter spending by selected account when active
     dateFrom,
     dateTo
   )
@@ -150,9 +150,19 @@ export default function GoalsPage() {
   // ── Unified goals logic ───────────────────────────────────────────────────
   const unifiedLoading = sharedGoalsLoading || unifiedMetricsLoading
 
-  const sharedTotalBudget = sharedGoals.reduce((s, g) => s + g.amount, 0)
-  const sharedTotalSpent = sharedGoals.reduce((s, g) => {
-    const origCatId = g.shared_category?.original_category_id
+  // When a specific member is selected, show only their contributed categories/goals
+  const displayedSharedCats = (unifiedMode && filterUserId)
+    ? sharedCats.filter((c) => c.created_from_user_id === filterUserId)
+    : sharedCats
+
+  const displayedSharedGoals = (unifiedMode && filterUserId)
+    ? sharedGoals.filter((g) => displayedSharedCats.some((c) => c.id === g.shared_category_id))
+    : sharedGoals
+
+  const sharedTotalBudget = displayedSharedGoals.reduce((s, g) => s + g.amount, 0)
+  const sharedTotalSpent = displayedSharedGoals.reduce((s, g) => {
+    const cat = displayedSharedCats.find((c) => c.id === g.shared_category_id)
+    const origCatId = cat?.original_category_id ?? g.shared_category?.original_category_id
     if (!origCatId) return s
     const rank = unifiedMetrics?.expenseCategoryRanking.find((r) => r.category_id === origCatId)
     return s + (rank?.total ?? 0)
@@ -198,15 +208,15 @@ export default function GoalsPage() {
         </div>
       ) : unifiedMode ? (
         /* ── UNIFIED GOALS VIEW ── */
-        sharedCats.length === 0 ? (
+        displayedSharedCats.length === 0 ? (
           <EmptyState icon={Target} title="Sem categorias compartilhadas"
             description="Configure categorias na aba Categorias para definir metas" />
         ) : (
           <>
-            {sharedGoals.length > 0 && sharedTotalBudget > 0 && (
+            {displayedSharedGoals.length > 0 && sharedTotalBudget > 0 && (
               <Card className="p-4 flex flex-col gap-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[2px]" style={{ color: 'var(--text-3)' }}>
-                  Resumo unificado · {sharedGoals.length} {sharedGoals.length === 1 ? 'meta' : 'metas'}
+                  Resumo unificado · {displayedSharedGoals.length} {displayedSharedGoals.length === 1 ? 'meta' : 'metas'}
                 </p>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                   <div className="h-full rounded-full transition-all duration-500"
@@ -231,8 +241,8 @@ export default function GoalsPage() {
               </Card>
             )}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {sharedCats.map((cat) => {
-                const goal = sharedGoals.find((g) => g.shared_category_id === cat.id)
+              {displayedSharedCats.map((cat) => {
+                const goal = displayedSharedGoals.find((g) => g.shared_category_id === cat.id)
                 const origCatId = cat.original_category_id
                 const rank = origCatId ? unifiedMetrics?.expenseCategoryRanking.find((r) => r.category_id === origCatId) : null
                 const spent = rank?.total ?? 0

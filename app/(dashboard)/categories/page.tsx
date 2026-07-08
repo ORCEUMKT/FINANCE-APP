@@ -172,8 +172,13 @@ export default function CategoriesPage() {
     }
   }
 
+  // When a specific member is selected, show only their contributed categories
+  const displayedSharedCats = (unifiedMode && filterUserId)
+    ? sharedCats.filter((c) => c.created_from_user_id === filterUserId)
+    : sharedCats
+
   const loading = unifiedMode ? sharedLoading : personalLoading
-  const displayCount = unifiedMode ? sharedCats.length : categories.length
+  const displayCount = unifiedMode ? displayedSharedCats.length : categories.length
 
   return (
     <div className="flex flex-col gap-6">
@@ -233,7 +238,7 @@ export default function CategoriesPage() {
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {unifiedMode
-              ? sharedCats.map((cat) => (
+              ? displayedSharedCats.map((cat) => (
                   <SharedCategoryCard
                     key={cat.id} cat={cat}
                     isDeleting={sharedDeleting === cat.id}
