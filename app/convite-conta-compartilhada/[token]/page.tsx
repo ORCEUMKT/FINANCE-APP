@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { lookupInvitePageData, acceptInvite, setupSharedCategories, addMissingSharedCategoriesFromUser } from '@/services/sharedAccountService'
 import { getCategories } from '@/services/categoriesService'
 import { getGoals } from '@/services/goalsService'
+import { createClient } from '@/lib/supabase/client'
 import type { InvitePageData } from '@/types/sharedAccount'
 
 type FlowStep = 'loading' | 'invalid' | 'confirm' | 'done' | 'error'
@@ -47,6 +48,17 @@ export default function InvitePage() {
     try {
       const result = await acceptInvite(params.token)
       setStep('done')
+
+      // Notify account01 in real-time via broadcast (no RLS dependency)
+      try {
+        const supabase = createClient()
+        const notifyCh = supabase.channel(`invite:${result.sharedAccountId}`)
+        await new Promise<void>((resolve) => {
+          notifyCh.subscribe((status) => { if (status === 'SUBSCRIBED') resolve() })
+        })
+        await notifyCh.send({ type: 'broadcast', event: 'invite_accepted', payload: {} })
+        notifyCh.unsubscribe()
+      } catch { /* best-effort */ }
 
       // Apply setup based on what the inviter chose — no cross-user RPC calls needed:
       // "theirs" = inviter wants our categories → apply 'mine' (our own cats)

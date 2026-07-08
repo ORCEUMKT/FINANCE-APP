@@ -120,18 +120,14 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
-  // Subscribe to partner joining so pending setup ('theirs'/'merge') auto-applies
+  // Listen for invite_accepted broadcast so account01 refreshes the moment account02 joins.
+  // Uses Broadcast (not Postgres Changes) to avoid RLS restrictions on shared_account_members.
   useEffect(() => {
     if (!sharedAccount || members.length >= 2) return
     const supabase = createClient()
     const ch = supabase
-      .channel(`members:${sharedAccount.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'shared_account_members',
-        filter: `shared_account_id=eq.${sharedAccount.id}`,
-      }, () => load())
+      .channel(`invite:${sharedAccount.id}`)
+      .on('broadcast', { event: 'invite_accepted' }, () => load())
       .subscribe()
     return () => { ch.unsubscribe() }
   }, [sharedAccount?.id, members.length, load]) // eslint-disable-line react-hooks/exhaustive-deps
