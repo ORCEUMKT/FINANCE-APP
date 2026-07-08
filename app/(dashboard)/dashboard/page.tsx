@@ -25,7 +25,10 @@ import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/lib/formatters'
 import { parseVoiceInput, type VoicePrefill } from '@/lib/voiceParser'
 import { createTransaction } from '@/services/transactionsService'
+import { getSharedCategories } from '@/services/sharedAccountService'
 import type { TransactionInsert } from '@/types/transaction'
+import type { SharedCategory } from '@/types/sharedAccount'
+import type { Category } from '@/types/category'
 
 const VoiceMicButton = dynamic(() => import('@/components/ui/VoiceMicButton').then(m => m.VoiceMicButton), { ssr: false })
 const TransactionForm = dynamic(() => import('@/components/transactions/TransactionForm').then(m => m.TransactionForm), { ssr: false })
@@ -60,6 +63,34 @@ export default function DashboardPage() {
   // Re-fetch unified metrics when partner makes a change (real-time broadcast)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (lastSharedUpdate && unifiedMode) unifiedRefetch() }, [lastSharedUpdate])
+
+  // Shared categories for the transaction form in unified mode
+  const [sharedCats, setSharedCats] = useState<SharedCategory[]>([])
+  useEffect(() => {
+    if (!unifiedMode || !sharedAccount) { setSharedCats([]); return }
+    getSharedCategories(sharedAccount.id).then(setSharedCats).catch(() => {})
+  }, [unifiedMode, sharedAccount?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const formCategories = useMemo((): Category[] => {
+    if (!unifiedMode || !sharedCats.length) return categories
+    return sharedCats.map((sc) => {
+      const personal = categories.find(
+        (c) => c.id === sc.original_category_id ||
+               c.name.toLowerCase().trim() === sc.name.toLowerCase().trim()
+      )
+      return personal ?? {
+        id: '',
+        name: sc.name,
+        color: sc.color,
+        icon: sc.icon,
+        type: sc.type as Category['type'],
+        user_id: '',
+        is_default: false,
+        created_at: sc.created_at,
+        updated_at: sc.created_at,
+      }
+    })
+  }, [unifiedMode, sharedCats, categories])
 
   const [formOpen, setFormOpen]         = useState(false)
   const [voicePrefill, setVoicePrefill] = useState<VoicePrefill | null>(null)
@@ -393,7 +424,7 @@ export default function DashboardPage() {
         open={formOpen}
         onClose={() => { setFormOpen(false); setVoicePrefill(null) }}
         onSubmit={handleSubmit}
-        categories={categories}
+        categories={formCategories}
         prefill={voicePrefill}
       />
     </>

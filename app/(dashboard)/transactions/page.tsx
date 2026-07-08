@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, Suspense } from 'react'
+import { useState, useCallback, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
@@ -12,7 +12,9 @@ import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedTransactions } from '@/services/sharedAccountService'
+import { getSharedTransactions, getSharedCategories } from '@/services/sharedAccountService'
+import type { SharedCategory } from '@/types/sharedAccount'
+import type { Category } from '@/types/category'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
@@ -67,6 +69,36 @@ function TransactionsContent() {
   const { transactions, loading, refetch, add, update, remove, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
   const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange } = useSharedAccount()
+
+  // Shared categories for the transaction form in unified mode
+  const [sharedCats, setSharedCats] = useState<SharedCategory[]>([])
+  useEffect(() => {
+    if (!unifiedMode || !sharedAccount) { setSharedCats([]); return }
+    getSharedCategories(sharedAccount.id).then(setSharedCats).catch(() => {})
+  }, [unifiedMode, sharedAccount?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // In unified mode, show shared category names mapped to matching personal category IDs.
+  // Falls back to personal categories if no shared ones exist.
+  const formCategories = useMemo((): Category[] => {
+    if (!unifiedMode || !sharedCats.length) return categories
+    return sharedCats.map((sc) => {
+      const personal = categories.find(
+        (c) => c.id === sc.original_category_id ||
+               c.name.toLowerCase().trim() === sc.name.toLowerCase().trim()
+      )
+      return personal ?? {
+        id: '',          // no personal match → category_id saved as null
+        name: sc.name,
+        color: sc.color,
+        icon: sc.icon,
+        type: sc.type as Category['type'],
+        user_id: '',
+        is_default: false,
+        created_at: sc.created_at,
+        updated_at: sc.created_at,
+      }
+    })
+  }, [unifiedMode, sharedCats, categories])
 
   // Unified transactions state
   const [unifiedTxs, setUnifiedTxs]           = useState<Transaction[]>([])
@@ -345,7 +377,7 @@ function TransactionsContent() {
         open={formOpen}
         onClose={() => { setFormOpen(false); setEditing(null); setVoicePrefill(null); setDuplicating(null) }}
         onSubmit={handleSubmit}
-        categories={categories}
+        categories={formCategories}
         editingTransaction={editing}
         prefill={voicePrefill}
         prefillFrom={duplicating}
