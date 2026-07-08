@@ -120,7 +120,7 @@ export function SharedAccountSetupModal() {
           </button>
         </div>
         <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-3)' }}>
-          {invitee?.name ?? 'O outro membro'} aceitou seu convite! Escolha como organizar as categorias e metas da visão compartilhada.
+          A conta compartilhada com <strong style={{ color: 'var(--text-2)' }}>{invitee?.name ?? 'o outro membro'}</strong> ainda não tem categorias. Escolha como organizar as categorias e metas da visão compartilhada.
         </p>
 
         <div className="flex flex-col gap-2 mb-5">

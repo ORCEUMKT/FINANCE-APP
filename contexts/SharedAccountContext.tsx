@@ -85,13 +85,12 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
           setFilterUserIdState(null)
         }
 
-        // Check if owner needs to configure shared categories
-        const isOwner = account.created_by === user.id
+        // Any member with 0 shared categories sees the setup modal (not just the owner)
         const hasEnoughMembers = ms.length >= 2
         const setupDoneKey = `shared_setup_done_${account.id}`
         const setupDoneInStorage = typeof window !== 'undefined' && localStorage.getItem(setupDoneKey) === '1'
 
-        if (isOwner && hasEnoughMembers && !setupDoneInStorage) {
+        if (hasEnoughMembers && !setupDoneInStorage) {
           const catCount = await countSharedCategories(account.id)
           setNeedsCategorySetup(catCount === 0)
         } else {

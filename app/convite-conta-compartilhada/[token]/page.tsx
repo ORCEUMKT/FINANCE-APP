@@ -62,6 +62,9 @@ export default function InvitePage() {
         }
       }
 
+      // Mark setup as done so the modal doesn't show after redirect
+      localStorage.setItem(`shared_setup_done_${result.sharedAccountId}`, '1')
+
       setTimeout(() => router.push('/dashboard'), 1500)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Erro ao aceitar convite.')
