@@ -40,7 +40,7 @@ export function Sidebar({ user: _ }: { user: unknown }) {
         {/* Collapsed: icon only, centered */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo/logo-icon.png"
+          src="/logo/logo-icon.webp"
           alt="Logo"
           style={{
             height: '26px',
