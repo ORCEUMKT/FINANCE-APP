@@ -218,7 +218,7 @@ export async function lookupInvitePageData(token: string): Promise<InvitePageDat
 
 // ─── Accept invite ────────────────────────────────────────────────────────────
 
-export async function acceptInvite(token: string): Promise<{ sharedAccountId: string; inviterId: string }> {
+export async function acceptInvite(token: string): Promise<{ sharedAccountId: string; inviterId: string; setupOption: string | null }> {
   const supabase = db()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
@@ -448,6 +448,54 @@ export async function getSharedCategories(sharedAccountId: string): Promise<Shar
     .order('name')
   if (error) throw error
   return (data ?? []) as SharedCategory[]
+}
+
+// Adds the current user's categories/goals that don't already exist in the shared account.
+// Used for the "merge" second phase (invitee adding to inviter's already-applied categories).
+// Zero RPC calls — each user only reads/writes their own data.
+export async function addMissingSharedCategoriesFromUser(
+  sharedAccountId: string,
+  myCategories: Category[],
+  myGoals: CategoryGoal[]
+): Promise<void> {
+  if (myCategories.length === 0) return
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: existing } = await supabase
+    .from('shared_categories')
+    .select('name, type')
+    .eq('shared_account_id', sharedAccountId)
+
+  const existingKeys = new Set(
+    (existing ?? []).map((c: { name: string; type: string }) =>
+      `${normalizeName(c.name)}:${c.type}`
+    )
+  )
+
+  const newCats = myCategories.filter(
+    (c) => !existingKeys.has(`${normalizeName(c.name)}:${c.type}`)
+  )
+  if (newCats.length === 0) return
+
+  const rows = newCats.map((c) => ({
+    shared_account_id: sharedAccountId,
+    name: c.name,
+    icon: c.icon,
+    color: c.color,
+    type: c.type,
+    created_from_user_id: user.id,
+    original_category_id: c.id,
+  }))
+
+  const { data: created, error } = await supabase
+    .from('shared_categories')
+    .insert(rows)
+    .select()
+  if (error) throw error
+
+  await createSharedGoals(sharedAccountId, myGoals, (created ?? []) as SharedCategory[], user.id)
 }
 
 export async function createSingleSharedCategory(

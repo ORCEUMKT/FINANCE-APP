@@ -26,8 +26,8 @@ import type { SharedAccountInvite, CategorySetupOption } from '@/types/sharedAcc
 const SETUP_OPTIONS: { key: CategorySetupOption; icon: React.ReactNode; title: string; description: string }[] = [
   { key: 'zero',   icon: <Star size={16} />,    title: 'Começar do zero',                      description: 'Criar sem categorias ou metas. Configure manualmente depois.' },
   { key: 'mine',   icon: <Layers size={16} />,  title: 'Usar minhas categorias e metas',       description: 'Copiar minhas categorias e metas como base da conta compartilhada.' },
-  { key: 'theirs', icon: <RefreshCw size={16} />, title: 'Usar categorias do outro membro',    description: 'Copiar as categorias e metas da outra pessoa. Aplicado quando ele aceitar.' },
-  { key: 'merge',  icon: <Shuffle size={16} />, title: 'Unificar categorias dos dois',         description: 'Juntar as categorias de ambos, evitando duplicatas. Aplicado quando ele aceitar.' },
+  { key: 'theirs', icon: <RefreshCw size={16} />, title: 'Usar categorias do outro membro',    description: 'Copiar as categorias e metas da outra pessoa como base. Aplicado quando ele aceitar.' },
+  { key: 'merge',  icon: <Shuffle size={16} />, title: 'Unificar categorias dos dois',         description: 'Juntar as categorias de ambos, evitando duplicatas.' },
 ]
 
 export default function SettingsPage() {
@@ -102,10 +102,18 @@ export default function SettingsPage() {
         const [cats, goals] = await Promise.all([getCategories(), getGoals()])
         await setupSharedCategories(account.id, 'mine', me!.id, '', cats, goals)
         localStorage.setItem(`shared_setup_done_${account.id}`, '1')
+      } else if (setupOption === 'merge') {
+        // Apply OWN categories immediately (first half of merge).
+        // Invitee adds their missing categories on acceptance — no cross-user RPC needed.
+        const [cats, goals] = await Promise.all([getCategories(), getGoals()])
+        await setupSharedCategories(account.id, 'mine', me!.id, '', cats, goals)
+        localStorage.setItem(`shared_setup_done_${account.id}`, '1')
       } else {
-        // 'theirs' or 'merge' — store and apply automatically when partner accepts
-        localStorage.setItem(`shared_setup_pending_${account.id}`, setupOption)
+        // 'theirs' — nothing applied now; invitee applies their own cats on acceptance.
+        // Don't mark done: if invitee fails, this user can still use the setup picker modal.
       }
+      // Clean up any stale pending key from old flow
+      localStorage.removeItem(`shared_setup_pending_${account.id}`)
 
       const inv = await getOrCreateInvite(account.id, setupOption)
       setInvite(inv)

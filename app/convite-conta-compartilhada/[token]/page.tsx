@@ -6,10 +6,10 @@ import { Users, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
-import { lookupInvitePageData, acceptInvite, setupSharedCategories } from '@/services/sharedAccountService'
+import { lookupInvitePageData, acceptInvite, setupSharedCategories, addMissingSharedCategoriesFromUser } from '@/services/sharedAccountService'
 import { getCategories } from '@/services/categoriesService'
 import { getGoals } from '@/services/goalsService'
-import type { InvitePageData, CategorySetupOption } from '@/types/sharedAccount'
+import type { InvitePageData } from '@/types/sharedAccount'
 
 type FlowStep = 'loading' | 'invalid' | 'confirm' | 'done' | 'error'
 
@@ -48,18 +48,19 @@ export default function InvitePage() {
       const result = await acceptInvite(params.token)
       setStep('done')
 
-      // Apply setup that the inviter configured (theirs/merge must run on invitee side
-      // since they need the invitee's categories, which only exist in this browser)
-      if (result.setupOption === 'theirs' || result.setupOption === 'merge') {
-        try {
+      // Apply setup based on what the inviter chose — no cross-user RPC calls needed:
+      // "theirs" = inviter wants our categories → apply 'mine' (our own cats)
+      // "merge"  = inviter already applied their half; we add our missing cats
+      try {
+        if (result.setupOption === 'theirs') {
           const [cats, goals] = await Promise.all([getCategories(), getGoals()])
-          // "theirs" from inviter's perspective = use THIS user's categories ("mine")
-          // "merge"  = merge both users' categories
-          const optionToApply: CategorySetupOption = result.setupOption === 'theirs' ? 'mine' : 'merge'
-          await setupSharedCategories(result.sharedAccountId, optionToApply, user.id, result.inviterId, cats, goals)
-        } catch {
-          // best-effort — user will see empty categories but can create manually
+          await setupSharedCategories(result.sharedAccountId, 'mine', user.id, result.inviterId, cats, goals)
+        } else if (result.setupOption === 'merge') {
+          const [cats, goals] = await Promise.all([getCategories(), getGoals()])
+          await addMissingSharedCategoriesFromUser(result.sharedAccountId, cats, goals)
         }
+      } catch {
+        // best-effort — user will see empty categories but can create manually
       }
 
       // Mark setup as done so the modal doesn't show after redirect

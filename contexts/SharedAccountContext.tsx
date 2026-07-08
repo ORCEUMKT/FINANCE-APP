@@ -47,7 +47,13 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   const [sharedAccount, setSharedAccount] = useState<SharedAccount | null>(null)
   const [members, setMembers] = useState<SharedAccountMemberWithProfile[]>([])
   const [myMembership, setMyMembership] = useState<SharedAccountMemberWithProfile | null>(null)
-  const [unifiedMode, setUnifiedModeState] = useState(false)
+  // Initialise from persisted mode to avoid the personal→unified flash on first render
+  const [unifiedMode, setUnifiedModeState] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const lastId = localStorage.getItem('last_shared_account_id')
+    if (!lastId) return false
+    return localStorage.getItem(`unified_mode_${lastId}`) === 'true'
+  })
   const [filterUserId, setFilterUserIdState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsCategorySetup, setNeedsCategorySetup] = useState(false)
@@ -65,6 +71,7 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
       setSharedAccount(account)
 
       if (account && user) {
+        localStorage.setItem('last_shared_account_id', account.id)
         const ms = await getSharedAccountMembers(account.id)
         setMembers(ms)
         setMyMembership(ms.find((m) => m.user_id === user.id) ?? null)

@@ -46,8 +46,6 @@ export function SharedAccountSetupModal() {
   const [myCategories, setMyCategories] = useState<Category[]>([])
   const [myGoals, setMyGoals] = useState<CategoryGoal[]>([])
   const [loadedData, setLoadedData] = useState(false)
-  const [autoApplying, setAutoApplying] = useState(false)
-
   useEffect(() => {
     if (!needsCategorySetup || loadedData) return
     Promise.all([getCategories(), getGoals()]).then(([cats, goals]) => {
@@ -57,22 +55,7 @@ export function SharedAccountSetupModal() {
     })
   }, [needsCategorySetup, loadedData])
 
-  // Auto-apply if inviter stored a pending setup option (theirs/merge)
-  useEffect(() => {
-    if (!needsCategorySetup || !sharedAccount || !myMembership || !loadedData || autoApplying) return
-    const pending = localStorage.getItem(`shared_setup_pending_${sharedAccount.id}`)
-    if (!pending) return
-    const invitee = members.find((m) => m.user_id !== myMembership.user_id)
-    if (!invitee) return
-    setAutoApplying(true)
-    localStorage.removeItem(`shared_setup_pending_${sharedAccount.id}`)
-    setupSharedCategories(sharedAccount.id, pending as CategorySetupOption, myMembership.user_id, invitee.user_id, myCategories, myGoals)
-      .then(() => broadcastChange())
-      .catch(() => {})
-      .finally(() => markSetupDone())
-  }, [needsCategorySetup, sharedAccount?.id, myMembership?.user_id, loadedData, autoApplying, members]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!needsCategorySetup || !sharedAccount || !myMembership || autoApplying) return null
+  if (!needsCategorySetup || !sharedAccount || !myMembership) return null
 
   // The invitee is whichever member is NOT the current user
   const invitee = members.find((m) => m.user_id !== myMembership.user_id)
