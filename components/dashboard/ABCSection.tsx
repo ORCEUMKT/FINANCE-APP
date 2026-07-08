@@ -10,7 +10,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/lib/formatters'
 
 type ABCClass = 'A' | 'B' | 'C'
-type TxType = 'expense' | 'income'
+type TxType   = 'expense' | 'income'
+type ViewMode = 'category' | 'transaction'
 
 const CLASS_COLOR: Record<ABCClass, string> = {
   A: 'var(--green)',
@@ -29,47 +30,92 @@ const CLASS_BORDER: Record<ABCClass, string> = {
 }
 const CLASS_LABEL: Record<ABCClass, string> = { A: '0 – 80%', B: '80 – 95%', C: '95 – 100%' }
 
-function useABC(transactions: ReturnType<typeof useTransactions>['transactions']) {
-  return useMemo(() => {
-    const map = new Map<string, { name: string; color: string; total: number; count: number }>()
+interface ABCItem {
+  name: string
+  subLabel?: string
+  color: string
+  total: number
+  count: number
+  pct: number
+  cumulative: number
+  cls: ABCClass
+}
 
-    transactions.forEach((tx) => {
-      const key = tx.category_id ?? '__none__'
-      const existing = map.get(key)
-      if (existing) { existing.total += tx.value; existing.count++ }
-      else map.set(key, {
-        name: tx.category?.name ?? 'Sem categoria',
-        color: tx.category?.color ?? '#666',
-        total: tx.value,
-        count: 1,
-      })
+function buildABCByCategory(transactions: ReturnType<typeof useTransactions>['transactions']): {
+  items: ABCItem[]
+  grandTotal: number
+  summary: Record<ABCClass, { count: number; total: number }>
+} {
+  const map = new Map<string, { name: string; color: string; total: number; count: number }>()
+
+  transactions.forEach((tx) => {
+    const key = tx.category_id ?? '__none__'
+    const existing = map.get(key)
+    if (existing) { existing.total += tx.value; existing.count++ }
+    else map.set(key, {
+      name: tx.category?.name ?? 'Sem categoria',
+      color: tx.category?.color ?? '#666',
+      total: tx.value,
+      count: 1,
     })
+  })
 
-    const sorted = Array.from(map.values()).sort((a, b) => b.total - a.total)
-    const grandTotal = sorted.reduce((s, c) => s + c.total, 0)
+  const sorted = Array.from(map.values()).sort((a, b) => b.total - a.total)
+  const grandTotal = sorted.reduce((s, c) => s + c.total, 0)
 
-    let cumulative = 0
-    const items = sorted.map((c, index) => {
-      const pct = grandTotal > 0 ? (c.total / grandTotal) * 100 : 0
-      cumulative += pct
-      const cls: ABCClass = cumulative <= 80 ? 'A' : cumulative <= 95 ? 'B' : 'C'
-      return { ...c, index, pct, cumulative, cls }
-    })
+  let cumulative = 0
+  const items: ABCItem[] = sorted.map((c) => {
+    const pct = grandTotal > 0 ? (c.total / grandTotal) * 100 : 0
+    cumulative += pct
+    const cls: ABCClass = cumulative <= 80 ? 'A' : cumulative <= 95 ? 'B' : 'C'
+    return { ...c, pct, cumulative, cls }
+  })
 
-    const summary: Record<ABCClass, { count: number; total: number }> = {
-      A: { count: 0, total: 0 },
-      B: { count: 0, total: 0 },
-      C: { count: 0, total: 0 },
+  const summary: Record<ABCClass, { count: number; total: number }> = {
+    A: { count: 0, total: 0 }, B: { count: 0, total: 0 }, C: { count: 0, total: 0 },
+  }
+  items.forEach((item) => { summary[item.cls].count++; summary[item.cls].total += item.total })
+
+  return { items, grandTotal, summary }
+}
+
+function buildABCByTransaction(transactions: ReturnType<typeof useTransactions>['transactions']): {
+  items: ABCItem[]
+  grandTotal: number
+  summary: Record<ABCClass, { count: number; total: number }>
+} {
+  const sorted = [...transactions].sort((a, b) => b.value - a.value)
+  const grandTotal = sorted.reduce((s, t) => s + t.value, 0)
+
+  let cumulative = 0
+  const items: ABCItem[] = sorted.map((tx) => {
+    const pct = grandTotal > 0 ? (tx.value / grandTotal) * 100 : 0
+    cumulative += pct
+    const cls: ABCClass = cumulative <= 80 ? 'A' : cumulative <= 95 ? 'B' : 'C'
+    return {
+      name: tx.description,
+      subLabel: tx.category?.name ?? 'Sem categoria',
+      color: tx.category?.color ?? '#888',
+      total: tx.value,
+      count: 1,
+      pct,
+      cumulative,
+      cls,
     }
-    items.forEach((item) => { summary[item.cls].count++; summary[item.cls].total += item.total })
+  })
 
-    return { items, grandTotal, summary }
-  }, [transactions])
+  const summary: Record<ABCClass, { count: number; total: number }> = {
+    A: { count: 0, total: 0 }, B: { count: 0, total: 0 }, C: { count: 0, total: 0 },
+  }
+  items.forEach((item) => { summary[item.cls].count++; summary[item.cls].total += item.total })
+
+  return { items, grandTotal, summary }
 }
 
 export function ABCSection() {
   const { month: selectedMonth } = useSelectedMonth()
   const [activeType, setActiveType] = useState<TxType>('expense')
+  const [viewMode, setViewMode]     = useState<ViewMode>('category')
   const { dateFrom, dateTo } = monthRange(selectedMonth)
 
   const { transactions: expenseTxs, loading: loadingExp } = useTransactions({
@@ -79,15 +125,21 @@ export function ABCSection() {
     date_from: dateFrom, date_to: dateTo, type: 'income',
   })
 
-  const expenseABC = useABC(expenseTxs)
-  const incomeABC  = useABC(incomeTxs)
-
-  const { items, grandTotal, summary } = activeType === 'expense' ? expenseABC : incomeABC
+  const rawTxs  = activeType === 'expense' ? expenseTxs : incomeTxs
   const loading = activeType === 'expense' ? loadingExp : loadingInc
+
+  const abcByCategory    = useMemo(() => buildABCByCategory(rawTxs),    [rawTxs])
+  const abcByTransaction = useMemo(() => buildABCByTransaction(rawTxs), [rawTxs])
+
+  const { items, grandTotal, summary } = viewMode === 'category' ? abcByCategory : abcByTransaction
 
   const pctA = grandTotal > 0 ? (summary.A.total / grandTotal) * 100 : 0
   const pctB = grandTotal > 0 ? (summary.B.total / grandTotal) * 100 : 0
   const pctC = grandTotal > 0 ? (summary.C.total / grandTotal) * 100 : 0
+
+  const unitLabel = viewMode === 'category'
+    ? (n: number) => n === 1 ? 'categoria' : 'categorias'
+    : (n: number) => n === 1 ? 'lançamento' : 'lançamentos'
 
   const segStyle = (active: boolean): React.CSSProperties => ({
     flex: 1,
@@ -104,8 +156,8 @@ export function ABCSection() {
   })
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Type toggle */}
+    <div className="flex flex-col gap-4">
+      {/* Despesas / Receitas toggle */}
       <div
         className="flex gap-1 p-1 rounded-[14px]"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
@@ -115,6 +167,19 @@ export function ABCSection() {
         </button>
         <button onClick={() => setActiveType('income')} style={segStyle(activeType === 'income')}>
           Receitas
+        </button>
+      </div>
+
+      {/* Por categoria / Por lançamento toggle */}
+      <div
+        className="flex gap-1 p-1 rounded-[14px]"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+      >
+        <button onClick={() => setViewMode('category')} style={segStyle(viewMode === 'category')}>
+          Por categoria
+        </button>
+        <button onClick={() => setViewMode('transaction')} style={segStyle(viewMode === 'transaction')}>
+          Por lançamento
         </button>
       </div>
 
@@ -195,7 +260,7 @@ export function ABCSection() {
                   {formatCurrency(summary[cls].total)}
                 </p>
                 <p className="text-[10px] tabular" style={{ color: 'var(--text-3)' }}>
-                  {summary[cls].count} {summary[cls].count === 1 ? 'categoria' : 'categorias'}
+                  {summary[cls].count} {unitLabel(summary[cls].count)}
                 </p>
               </Card>
             ))}
@@ -218,12 +283,12 @@ export function ABCSection() {
               }}
             >
               <span>#</span>
-              <span>Categoria</span>
+              <span>{viewMode === 'category' ? 'Categoria' : 'Descrição'}</span>
               <span className="text-right">Valor</span>
               <span className="px-2">Participação</span>
               <span className="text-right">%</span>
-              <span className="text-right">∑%</span>
-              <span className="text-center">Cls</span>
+              <span className="text-right">∑% CLS</span>
+              <span />
             </div>
 
             <div className="flex flex-col">
@@ -239,10 +304,19 @@ export function ABCSection() {
                   <span className="w-5 sm:w-auto text-[11px] font-semibold tabular text-right flex-shrink-0" style={{ color: 'var(--text-3)' }}>
                     {i + 1}
                   </span>
-                  <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
-                    <span className="text-[13px] font-medium truncate" style={{ color: 'var(--text-1)' }}>{item.name}</span>
+
+                  <div className="flex flex-col gap-0.5 flex-1 sm:flex-none min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                      <span className="text-[13px] font-medium truncate" style={{ color: 'var(--text-1)' }}>{item.name}</span>
+                    </div>
+                    {viewMode === 'transaction' && item.subLabel && (
+                      <span className="text-[10px] pl-4.5 truncate" style={{ color: 'var(--text-3)', paddingLeft: '18px' }}>
+                        {item.subLabel}
+                      </span>
+                    )}
                   </div>
+
                   <span className="hidden sm:block text-[12px] font-semibold tabular text-right" style={{ color: 'var(--text-1)' }}>
                     {formatCurrency(item.total)}
                   </span>
@@ -253,6 +327,7 @@ export function ABCSection() {
                   </div>
                   <span className="hidden sm:block text-[11px] tabular text-right" style={{ color: 'var(--text-2)' }}>{item.pct.toFixed(1)}%</span>
                   <span className="hidden sm:block text-[11px] tabular text-right" style={{ color: 'var(--text-3)' }}>{item.cumulative.toFixed(0)}%</span>
+
                   <span className="sm:hidden text-[12px] font-semibold tabular ml-auto flex-shrink-0" style={{ color: 'var(--text-1)' }}>
                     {formatCurrency(item.total)}
                   </span>
