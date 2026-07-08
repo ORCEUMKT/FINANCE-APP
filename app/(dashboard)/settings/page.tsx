@@ -107,7 +107,7 @@ export default function SettingsPage() {
         localStorage.setItem(`shared_setup_pending_${account.id}`, setupOption)
       }
 
-      const inv = await getOrCreateInvite(account.id)
+      const inv = await getOrCreateInvite(account.id, setupOption)
       setInvite(inv)
       setSetupOpen(false)
     } catch (err) {

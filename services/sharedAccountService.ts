@@ -131,7 +131,7 @@ export async function getSharedAccountMembers(sharedAccountId: string): Promise<
 
 // ─── Invites ─────────────────────────────────────────────────────────────────
 
-export async function getOrCreateInvite(sharedAccountId: string): Promise<SharedAccountInvite> {
+export async function getOrCreateInvite(sharedAccountId: string, setupOption?: string): Promise<SharedAccountInvite> {
   const supabase = db()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
@@ -154,11 +154,21 @@ export async function getOrCreateInvite(sharedAccountId: string): Promise<Shared
     .limit(1)
     .maybeSingle()
 
-  if (existing) return existing as SharedAccountInvite
+  if (existing) {
+    // Update setup_option if it changed (e.g. user changed option before sending)
+    if (setupOption !== undefined && existing.setup_option !== setupOption) {
+      await supabase
+        .from('shared_account_invites')
+        .update({ setup_option: setupOption ?? null })
+        .eq('id', existing.id)
+      return { ...existing, setup_option: setupOption ?? null } as SharedAccountInvite
+    }
+    return existing as SharedAccountInvite
+  }
 
   const { data, error } = await supabase
     .from('shared_account_invites')
-    .insert({ shared_account_id: sharedAccountId, created_by: user.id })
+    .insert({ shared_account_id: sharedAccountId, created_by: user.id, setup_option: setupOption ?? null })
     .select()
     .single()
   if (error) throw error
@@ -260,7 +270,11 @@ export async function acceptInvite(token: string): Promise<{ sharedAccountId: st
     }
   }
 
-  return { sharedAccountId: invite.shared_account_id, inviterId: invite.created_by }
+  return {
+    sharedAccountId: invite.shared_account_id,
+    inviterId: invite.created_by,
+    setupOption: (invite.setup_option ?? null) as string | null,
+  }
 }
 
 // ─── Category setup after invite acceptance ───────────────────────────────────
@@ -434,6 +448,30 @@ export async function getSharedCategories(sharedAccountId: string): Promise<Shar
     .order('name')
   if (error) throw error
   return (data ?? []) as SharedCategory[]
+}
+
+export async function createSingleSharedCategory(
+  sharedAccountId: string,
+  data: { name: string; color: string; icon: string; type: string }
+): Promise<SharedCategory> {
+  const supabase = db()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+  const { data: result, error } = await supabase
+    .from('shared_categories')
+    .insert({
+      shared_account_id: sharedAccountId,
+      name: data.name,
+      icon: data.icon,
+      color: data.color,
+      type: data.type,
+      created_from_user_id: user.id,
+      original_category_id: null,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return result as SharedCategory
 }
 
 export async function updateSharedCategory(

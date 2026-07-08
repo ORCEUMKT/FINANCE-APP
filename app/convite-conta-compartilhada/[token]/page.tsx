@@ -6,8 +6,10 @@ import { Users, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
-import { lookupInvitePageData, acceptInvite } from '@/services/sharedAccountService'
-import type { InvitePageData } from '@/types/sharedAccount'
+import { lookupInvitePageData, acceptInvite, setupSharedCategories } from '@/services/sharedAccountService'
+import { getCategories } from '@/services/categoriesService'
+import { getGoals } from '@/services/goalsService'
+import type { InvitePageData, CategorySetupOption } from '@/types/sharedAccount'
 
 type FlowStep = 'loading' | 'invalid' | 'confirm' | 'done' | 'error'
 
@@ -43,9 +45,24 @@ export default function InvitePage() {
     }
     setAccepting(true)
     try {
-      await acceptInvite(params.token)
+      const result = await acceptInvite(params.token)
       setStep('done')
-      setTimeout(() => router.push('/dashboard'), 1800)
+
+      // Apply setup that the inviter configured (theirs/merge must run on invitee side
+      // since they need the invitee's categories, which only exist in this browser)
+      if (result.setupOption === 'theirs' || result.setupOption === 'merge') {
+        try {
+          const [cats, goals] = await Promise.all([getCategories(), getGoals()])
+          // "theirs" from inviter's perspective = use THIS user's categories ("mine")
+          // "merge"  = merge both users' categories
+          const optionToApply: CategorySetupOption = result.setupOption === 'theirs' ? 'mine' : 'merge'
+          await setupSharedCategories(result.sharedAccountId, optionToApply, user.id, result.inviterId, cats, goals)
+        } catch {
+          // best-effort — user will see empty categories but can create manually
+        }
+      }
+
+      setTimeout(() => router.push('/dashboard'), 1500)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Erro ao aceitar convite.')
       setStep('error')

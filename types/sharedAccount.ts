@@ -31,6 +31,7 @@ export interface SharedAccountInvite {
   accepted_by: string | null
   accepted_at: string | null
   created_at: string
+  setup_option: string | null
 }
 
 export interface SharedCategory {

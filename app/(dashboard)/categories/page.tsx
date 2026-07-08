@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Tag } from 'lucide-react'
 import { useCategories } from '@/hooks/useCategories'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedCategories, updateSharedCategory, deleteSharedCategory } from '@/services/sharedAccountService'
+import { getSharedCategories, createSingleSharedCategory, updateSharedCategory, deleteSharedCategory } from '@/services/sharedAccountService'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -116,6 +116,13 @@ export default function CategoriesPage() {
     finally { setDeleting(null) }
   }
 
+  function openAddShared() {
+    setEditingShared(null)
+    setSharedForm(DEFAULT_FORM)
+    setSharedFormError('')
+    setSharedFormOpen(true)
+  }
+
   function openEditShared(cat: SharedCategory) {
     setEditingShared(cat)
     setSharedForm({ name: cat.name, color: cat.color, icon: cat.icon, type: cat.type as Category['type'] })
@@ -125,16 +132,24 @@ export default function CategoriesPage() {
 
   async function handleSharedSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!editingShared) return
     const errs = validateCategory(sharedForm)
     if (errs.length) { setSharedFormError(errs[0].message); return }
+    if (!sharedAccount) return
     setSharedSaving(true)
     try {
-      const updated = await updateSharedCategory(editingShared.id, {
-        name: sharedForm.name.trim(), color: sharedForm.color, icon: sharedForm.icon, type: sharedForm.type,
-      })
-      setSharedCats((prev) => prev.map((c) => c.id === updated.id ? updated : c))
-      toast('Categoria atualizada!')
+      if (editingShared) {
+        const updated = await updateSharedCategory(editingShared.id, {
+          name: sharedForm.name.trim(), color: sharedForm.color, icon: sharedForm.icon, type: sharedForm.type,
+        })
+        setSharedCats((prev) => prev.map((c) => c.id === updated.id ? updated : c))
+        toast('Categoria atualizada!')
+      } else {
+        const created = await createSingleSharedCategory(sharedAccount.id, {
+          name: sharedForm.name.trim(), color: sharedForm.color, icon: sharedForm.icon, type: sharedForm.type,
+        })
+        setSharedCats((prev) => [...prev, created])
+        toast('Categoria criada!')
+      }
       setSharedFormOpen(false)
     } catch (err: unknown) {
       setSharedFormError(err instanceof Error ? err.message : 'Erro ao salvar.')
@@ -183,11 +198,15 @@ export default function CategoriesPage() {
               <AccountViewSelector options={viewOptions} activeKey={activeViewKey} onChange={selectView} />
             </div>
           )}
-          {!unifiedMode && (
+          {unifiedMode && sharedAccount ? (
+            <Button onClick={openAddShared} size="sm" className="gap-1.5">
+              <Plus size={13} /> Nova
+            </Button>
+          ) : !unifiedMode ? (
             <Button onClick={openAdd} size="sm" className="gap-1.5">
               <Plus size={13} /> Nova
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -201,8 +220,11 @@ export default function CategoriesPage() {
           icon={Tag}
           title={unifiedMode ? 'Sem categorias compartilhadas' : 'Sem categorias'}
           description={unifiedMode
-            ? 'Nenhuma categoria foi configurada para a conta compartilhada'
+            ? 'Crie categorias compartilhadas para organizar os lançamentos da conta unificada'
             : 'Crie categorias para organizar seus lançamentos'}
+          action={unifiedMode && sharedAccount
+            ? <Button size="sm" onClick={openAddShared} className="gap-1.5"><Plus size={13} /> Nova categoria</Button>
+            : undefined}
         />
       ) : (
         <>
@@ -233,7 +255,7 @@ export default function CategoriesPage() {
       )}
 
       {/* Form Modal — shared category edit */}
-      <Modal open={sharedFormOpen} onClose={() => setSharedFormOpen(false)} title="Editar Categoria Compartilhada">
+      <Modal open={sharedFormOpen} onClose={() => setSharedFormOpen(false)} title={editingShared ? 'Editar Categoria Compartilhada' : 'Nova Categoria Compartilhada'}>
         <form onSubmit={handleSharedSubmit} className="flex flex-col gap-4">
           <Input label="Nome" placeholder="Ex: Alimentação" value={sharedForm.name}
             onChange={(e) => setSharedForm((f) => ({ ...f, name: e.target.value }))} required maxLength={60} />
