@@ -339,10 +339,8 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
               style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.22)', color: 'var(--text-2)' }}
             >
               <span className="text-base leading-none mt-0.5">📎</span>
-              <span className="flex-1">
-                <span style={{ color: 'var(--text-3)' }}>Extraído de: </span>
-                <em style={{ color: 'var(--text-1)', fontStyle: 'normal', fontWeight: 500 }}>{docPrefill.fileName}</em>
-                <span style={{ color: 'var(--text-3)' }}> — revise e confirme</span>
+              <span className="flex-1" style={{ color: 'var(--text-3)' }}>
+                Dados extraídos do documento — revise e confirme
               </span>
               <button
                 type="button"
