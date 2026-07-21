@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Minus, Plus } from 'lucide-react'
+import { ChevronDown, Minus, Plus, ScanText, X } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -127,6 +127,16 @@ function CascadeDateDialog({
   )
 }
 
+interface DocPrefill {
+  description?: string | null
+  value?: number | null
+  date?: string | null
+  type?: string | null
+  category_name?: string | null
+  notes?: string | null
+  fileName?: string
+}
+
 export function TransactionForm({ open, onClose, onSubmit, categories, editingTransaction, prefill, prefillFrom }: TransactionFormProps) {
   const isEdit = !!editingTransaction
 
@@ -141,6 +151,9 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
   const [errors, setErrors]             = useState<FieldError[]>([])
   const [loading, setLoading]           = useState(false)
   const [pendingData, setPendingData]   = useState<TransactionInsert | null>(null)
+  const [docProcessing, setDocProcessing] = useState(false)
+  const [docPrefill, setDocPrefill]       = useState<DocPrefill | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
@@ -177,8 +190,45 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
       }
       setErrors([])
       setPendingData(null)
+      setDocPrefill(null)
     }
   }, [open, editingTransaction, prefillFrom, categories, prefill])
+
+  async function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Reset input so same file can be re-selected if needed
+    e.target.value = ''
+
+    setDocProcessing(true)
+    setErrors([])
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const res = await fetch('/api/parse-document', { method: 'POST', body })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error ?? 'Erro ao processar documento.')
+      }
+      const data: DocPrefill = await res.json()
+      data.fileName = file.name
+      setDocPrefill(data)
+
+      if (data.description) setDescription(data.description)
+      if (data.value != null) setValue(String(data.value))
+      if (data.date) setDate(data.date)
+      if (data.type === 'income' || data.type === 'expense') setType(data.type)
+      if (data.notes) setNotes(data.notes)
+      if (data.category_name) {
+        const catId = findCategoryId(categories, data.category_name)
+        if (catId) setCategoryId(catId)
+      }
+    } catch (err) {
+      setErrors([{ field: 'form', message: err instanceof Error ? err.message : 'Erro ao ler documento.' }])
+    } finally {
+      setDocProcessing(false)
+    }
+  }
 
   const fieldError = (field: string) => errors.find((e) => e.field === field)?.message
 
@@ -252,8 +302,59 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
   return (
     <>
+      {/* Hidden file input for document upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        className="hidden"
+        onChange={handleDocUpload}
+      />
+
       <Modal open={open} onClose={onClose} title={isEdit ? 'Editar Lançamento' : prefillFrom ? 'Duplicar Lançamento' : 'Novo Lançamento'}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+
+          {/* Document scan button — only for new transactions */}
+          {!isEdit && (
+            <button
+              type="button"
+              disabled={docProcessing}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-[12px] font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-2)',
+              }}
+            >
+              <ScanText size={14} style={{ color: 'var(--text-3)' }} />
+              {docProcessing ? 'Lendo documento…' : 'Ler recibo / boleto / NF'}
+            </button>
+          )}
+
+          {/* Document OCR banner */}
+          {!isEdit && docPrefill && (
+            <div
+              className="flex items-start gap-2.5 rounded-[12px] px-3 py-2.5 text-[11px]"
+              style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.22)', color: 'var(--text-2)' }}
+            >
+              <span className="text-base leading-none mt-0.5">📎</span>
+              <span className="flex-1">
+                <span style={{ color: 'var(--text-3)' }}>Extraído de: </span>
+                <em style={{ color: 'var(--text-1)', fontStyle: 'normal', fontWeight: 500 }}>{docPrefill.fileName}</em>
+                <span style={{ color: 'var(--text-3)' }}> — revise e confirme</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setDocPrefill(null)}
+                className="shrink-0 mt-0.5 hover:opacity-70 transition-opacity"
+                style={{ color: 'var(--text-3)' }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
           {/* Voice detection banner */}
           {!isEdit && prefill?.rawText && (
             <div
