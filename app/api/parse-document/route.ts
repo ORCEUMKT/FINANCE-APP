@@ -23,51 +23,6 @@ Regras:
 - Se não conseguir extrair o valor, use null
 - category_name: sugira uma categoria adequada em português (ex: "Alimentação", "Transporte", "Saúde", "Serviços", "Impostos", "Compras", etc.)`
 
-const MODELS = [
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-pro',
-  'gemini-pro-vision',
-]
-
-async function callGemini(base64: string, mimeType: string): Promise<string> {
-  const key = process.env.GEMINI_API_KEY
-  if (!key) throw new Error('GEMINI_API_KEY não configurada.')
-
-  const body = {
-    contents: [{
-      parts: [
-        { text: EXTRACTION_PROMPT },
-        { inline_data: { mime_type: mimeType, data: base64 } },
-      ],
-    }],
-    generationConfig: { maxOutputTokens: 512 },
-  }
-
-  for (const model of MODELS) {
-    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-    }
-
-    // Se for 404 ou 429, tenta o próximo modelo
-    const status = res.status
-    if (status !== 404 && status !== 429) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err?.error?.message ?? `Erro ${status} na API Gemini.`)
-    }
-  }
-
-  throw new Error('Nenhum modelo Gemini disponível no plano gratuito desta chave.')
-}
-
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -81,7 +36,39 @@ export async function POST(request: Request) {
     const base64 = Buffer.from(bytes).toString('base64')
     const mimeType = file.type || 'image/jpeg'
 
-    const text = await callGemini(base64, mimeType)
+    const key = process.env.OPENROUTER_API_KEY
+    if (!key) {
+      return NextResponse.json({ error: 'OPENROUTER_API_KEY não configurada.' }, { status: 500 })
+    }
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: EXTRACTION_PROMPT },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+            ],
+          },
+        ],
+        max_tokens: 512,
+      }),
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error?.message ?? `Erro ${res.status} na API.`)
+    }
+
+    const data = await res.json()
+    const text: string = data.choices?.[0]?.message?.content ?? ''
     const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
     const parsed = JSON.parse(cleaned)
 
