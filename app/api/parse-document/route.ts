@@ -23,24 +23,15 @@ Regras:
 - Se não conseguir extrair o valor, use null
 - category_name: sugira uma categoria adequada em português (ex: "Alimentação", "Transporte", "Saúde", "Serviços", "Impostos", "Compras", etc.)`
 
-export async function POST(request: Request) {
-  try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
+const FREE_VISION_MODELS = [
+  'google/gemini-2.0-flash-exp:free',
+  'google/gemini-flash-1.5-8b:free',
+  'qwen/qwen-2-vl-7b-instruct:free',
+  'qwen/qwen2.5-vl-7b-instruct:free',
+]
 
-    if (!file) {
-      return NextResponse.json({ error: 'Nenhum arquivo enviado.' }, { status: 400 })
-    }
-
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    const mimeType = file.type || 'image/jpeg'
-
-    const key = process.env.OPENROUTER_API_KEY
-    if (!key) {
-      return NextResponse.json({ error: 'OPENROUTER_API_KEY não configurada.' }, { status: 500 })
-    }
-
+async function callOpenRouter(key: string, mimeType: string, base64: string): Promise<string> {
+  for (const model of FREE_VISION_MODELS) {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -48,7 +39,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+        model,
         messages: [
           {
             role: 'user',
@@ -62,13 +53,41 @@ export async function POST(request: Request) {
       }),
     })
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err?.error?.message ?? `Erro ${res.status} na API.`)
+    if (res.ok) {
+      const data = await res.json()
+      return data.choices?.[0]?.message?.content ?? ''
     }
 
-    const data = await res.json()
-    const text: string = data.choices?.[0]?.message?.content ?? ''
+    const status = res.status
+    // Tenta próximo modelo se indisponível ou sem quota
+    if (status === 404 || status === 429 || status === 503) continue
+
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error?.message ?? `Erro ${status} na API.`)
+  }
+
+  throw new Error('Nenhum modelo de visão disponível no momento. Tente novamente em alguns instantes.')
+}
+
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) {
+      return NextResponse.json({ error: 'Nenhum arquivo enviado.' }, { status: 400 })
+    }
+
+    const key = process.env.OPENROUTER_API_KEY
+    if (!key) {
+      return NextResponse.json({ error: 'OPENROUTER_API_KEY não configurada.' }, { status: 500 })
+    }
+
+    const bytes = await file.arrayBuffer()
+    const base64 = Buffer.from(bytes).toString('base64')
+    const mimeType = file.type || 'image/jpeg'
+
+    const text = await callOpenRouter(key, mimeType, base64)
     const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
     const parsed = JSON.parse(cleaned)
 
