@@ -24,10 +24,10 @@ Regras:
 - category_name: sugira uma categoria adequada em português (ex: "Alimentação", "Transporte", "Saúde", "Serviços", "Impostos", "Compras", etc.)`
 
 const FREE_VISION_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'google/gemini-flash-1.5-8b:free',
-  'qwen/qwen-2-vl-7b-instruct:free',
-  'qwen/qwen2.5-vl-7b-instruct:free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
 ]
 
 async function callOpenRouter(key: string, mimeType: string, base64: string): Promise<string> {
@@ -58,12 +58,8 @@ async function callOpenRouter(key: string, mimeType: string, base64: string): Pr
       return data.choices?.[0]?.message?.content ?? ''
     }
 
-    const status = res.status
-    // Tenta próximo modelo se indisponível ou sem quota
-    if (status === 404 || status === 429 || status === 503) continue
-
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err?.error?.message ?? `Erro ${status} na API.`)
+    // Qualquer erro não-ok: tenta o próximo modelo
+    continue
   }
 
   throw new Error('Nenhum modelo de visão disponível no momento. Tente novamente em alguns instantes.')
