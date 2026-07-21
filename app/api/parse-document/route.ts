@@ -1,7 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextResponse } from 'next/server'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 const EXTRACTION_PROMPT = `Você é um assistente especializado em leitura de documentos financeiros brasileiros.
 Analise o documento e extraia as seguintes informações de lançamento financeiro.
@@ -26,6 +23,51 @@ Regras:
 - Se não conseguir extrair o valor, use null
 - category_name: sugira uma categoria adequada em português (ex: "Alimentação", "Transporte", "Saúde", "Serviços", "Impostos", "Compras", etc.)`
 
+const MODELS = [
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro',
+  'gemini-pro-vision',
+]
+
+async function callGemini(base64: string, mimeType: string): Promise<string> {
+  const key = process.env.GEMINI_API_KEY
+  if (!key) throw new Error('GEMINI_API_KEY não configurada.')
+
+  const body = {
+    contents: [{
+      parts: [
+        { text: EXTRACTION_PROMPT },
+        { inline_data: { mime_type: mimeType, data: base64 } },
+      ],
+    }],
+    generationConfig: { maxOutputTokens: 512 },
+  }
+
+  for (const model of MODELS) {
+    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    }
+
+    // Se for 404 ou 429, tenta o próximo modelo
+    const status = res.status
+    if (status !== 404 && status !== 429) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.error?.message ?? `Erro ${status} na API Gemini.`)
+    }
+  }
+
+  throw new Error('Nenhum modelo Gemini disponível no plano gratuito desta chave.')
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -37,16 +79,9 @@ export async function POST(request: Request) {
 
     const bytes = await file.arrayBuffer()
     const base64 = Buffer.from(bytes).toString('base64')
-    const mimeType = file.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | 'application/pdf'
+    const mimeType = file.type || 'image/jpeg'
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-
-    const result = await model.generateContent([
-      EXTRACTION_PROMPT,
-      { inlineData: { data: base64, mimeType } },
-    ])
-
-    const text = result.response.text()
+    const text = await callGemini(base64, mimeType)
     const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
     const parsed = JSON.parse(cleaned)
 
