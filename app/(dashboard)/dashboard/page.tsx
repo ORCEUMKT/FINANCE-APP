@@ -47,6 +47,7 @@ export default function DashboardPage() {
     unifiedMode, filterUserId,
     setUnifiedMode, setFilterUserId,
     lastSharedUpdate, broadcastChange,
+    lastCategoryUpdate,
     loading: sharedLoading,
   } = useSharedAccount()
 
@@ -70,7 +71,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!unifiedMode || !sharedAccount) { setSharedCats([]); return }
     getSharedCategories(sharedAccount.id).then(setSharedCats).catch(() => {})
-  }, [unifiedMode, sharedAccount?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [unifiedMode, sharedAccount?.id, lastCategoryUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const formCategories = useMemo((): Category[] => {
     if (!unifiedMode || !sharedCats.length) return categories

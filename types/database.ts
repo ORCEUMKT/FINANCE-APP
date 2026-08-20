@@ -52,6 +52,19 @@ export type Database = {
         }
         Returns: Json
       }
+      get_shared_account_transactions_page: {
+        Args: {
+          p_shared_account_id: string
+          p_date_from?:        string | null
+          p_date_to?:          string | null
+          p_filter_user_id?:   string | null
+          p_search?:           string | null
+          p_sort_by?:          string | null
+          p_page?:             number
+          p_page_size?:        number
+        }
+        Returns: Json
+      }
     }
     Enums:     { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

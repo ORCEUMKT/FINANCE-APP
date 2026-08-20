@@ -36,7 +36,7 @@ const segBtnStyle = (active: boolean): React.CSSProperties => ({
 
 export default function CategoriesPage() {
   const { categories, loading: personalLoading, add, update, remove } = useCategories()
-  const { sharedAccount, members, myMembership, unifiedMode, filterUserId, setUnifiedMode, setFilterUserId } = useSharedAccount()
+  const { sharedAccount, members, myMembership, unifiedMode, filterUserId, setUnifiedMode, setFilterUserId, lastCategoryUpdate, broadcastCategoryChange } = useSharedAccount()
   const { toast } = useToast()
 
   const [sharedCats, setSharedCats] = useState<SharedCategory[]>([])
@@ -64,7 +64,7 @@ export default function CategoriesPage() {
       .then(setSharedCats)
       .catch(() => setSharedCats([]))
       .finally(() => setSharedLoading(false))
-  }, [unifiedMode, sharedAccount?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [unifiedMode, sharedAccount?.id, lastCategoryUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Account view options (same pattern as dashboard)
   const viewOptions = sharedAccount && members.length >= 2
@@ -151,6 +151,7 @@ export default function CategoriesPage() {
         toast('Categoria criada!')
       }
       setSharedFormOpen(false)
+      broadcastCategoryChange()
     } catch (err: unknown) {
       setSharedFormError(err instanceof Error ? err.message : 'Erro ao salvar.')
     } finally {
@@ -165,6 +166,7 @@ export default function CategoriesPage() {
       await deleteSharedCategory(cat.id)
       setSharedCats((prev) => prev.filter((c) => c.id !== cat.id))
       toast('Categoria excluída.')
+      broadcastCategoryChange()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Erro ao excluir.', { type: 'error' })
     } finally {

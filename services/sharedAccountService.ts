@@ -426,6 +426,42 @@ export async function getSharedTransactions(
   return (data ?? []) as unknown as Transaction[]
 }
 
+// ─── Shared transactions — paginated (P2B) ────────────────────────────────────
+
+export type SharedTransactionsPage = {
+  rows: Transaction[]
+  totalCount: number
+}
+
+export async function getSharedTransactionsPage(params: {
+  sharedAccountId: string
+  dateFrom?: string
+  dateTo?: string
+  filterUserId?: string | null
+  search?: string
+  sortBy?: 'date' | 'value'
+  page: number
+  pageSize: number
+}): Promise<SharedTransactionsPage> {
+  const supabase = db()
+  const { data, error } = await supabase.rpc('get_shared_account_transactions_page', {
+    p_shared_account_id: params.sharedAccountId,
+    p_date_from:         params.dateFrom    ?? null,
+    p_date_to:           params.dateTo      ?? null,
+    p_filter_user_id:    params.filterUserId ?? null,
+    p_search:            params.search      ?? null,
+    p_sort_by:           params.sortBy      ?? 'date',
+    p_page:              params.page,
+    p_page_size:         params.pageSize,
+  })
+  if (error) throw error
+  const payload = data as { rows: unknown[]; total_count: number } | null
+  return {
+    rows:       (payload?.rows       ?? []) as Transaction[],
+    totalCount:  payload?.total_count ?? 0,
+  }
+}
+
 // ─── Category setup check ────────────────────────────────────────────────────
 
 export async function countSharedCategories(sharedAccountId: string): Promise<number> {

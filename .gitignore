@@ -45,3 +45,4 @@ load-test/reports/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*

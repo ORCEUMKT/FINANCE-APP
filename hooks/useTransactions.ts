@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Transaction, TransactionFilters, TransactionInsert, TransactionUpdate } from '@/types/transaction'
 import * as svc from '@/services/transactionsService'
-import { getCached, setCached } from '@/lib/queryCache'
+import { getCached, setCached, subscribeInvalidation } from '@/lib/queryCache'
 
 export function useTransactions(filters?: TransactionFilters) {
   const cacheKey = `transactions:${JSON.stringify(filters)}`
@@ -27,6 +27,13 @@ export function useTransactions(filters?: TransactionFilters) {
   }, [cacheKey]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
+
+  // Refetch imediato quando o cache deste prefixo for invalidado externamente (ex: broadcast tx_change)
+  useEffect(() => {
+    return subscribeInvalidation((prefix) => {
+      if (cacheKey.startsWith(prefix)) fetch()
+    })
+  }, [cacheKey, fetch])
 
   const add = useCallback(async (payload: TransactionInsert) => {
     const tx = await svc.createTransaction(payload)
