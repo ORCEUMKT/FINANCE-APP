@@ -12,7 +12,7 @@ import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedTransactions, getSharedCategories } from '@/services/sharedAccountService'
+import { getSharedTransactionsPage, getSharedCategories } from '@/services/sharedAccountService'
 import type { SharedCategory } from '@/types/sharedAccount'
 import type { Category } from '@/types/category'
 import { Button } from '@/components/ui/Button'
@@ -50,6 +50,7 @@ function TransactionsContent() {
     const { dateFrom: f, dateTo: t } = monthRange(v)
     setDateFrom(f)
     setDateTo(t)
+    setCurrentPage(1)
   }
   const [showFilters, setShowFilters] = useState(false)
   const [formOpen, setFormOpen]         = useState(() => params.get('new') === '1')
@@ -57,6 +58,11 @@ function TransactionsContent() {
   const [voicePrefill, setVoicePrefill]   = useState<VoicePrefill | null>(null)
   const [duplicating, setDuplicating]     = useState<Transaction | null>(null)
   const [deletedBuffer, setDeletedBuffer] = useState<Transaction | null>(null)
+
+  const pageSize = 50
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount]   = useState(0)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
   const filters = {
     search: search || undefined,
@@ -68,14 +74,14 @@ function TransactionsContent() {
 
   const { transactions, loading, refetch, add, update, remove, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
-  const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange } = useSharedAccount()
+  const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange, lastCategoryUpdate } = useSharedAccount()
 
   // Shared categories for the transaction form in unified mode
   const [sharedCats, setSharedCats] = useState<SharedCategory[]>([])
   useEffect(() => {
     if (!unifiedMode || !sharedAccount) { setSharedCats([]); return }
     getSharedCategories(sharedAccount.id).then(setSharedCats).catch(() => {})
-  }, [unifiedMode, sharedAccount?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [unifiedMode, sharedAccount?.id, lastCategoryUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // In unified mode, show shared category names mapped to matching personal category IDs.
   // Falls back to personal categories if no shared ones exist.
@@ -106,26 +112,51 @@ function TransactionsContent() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!unifiedMode || !sharedAccount) { setUnifiedTxs([]); return }
+    if (!unifiedMode || !sharedAccount) { setUnifiedTxs([]); setTotalCount(0); return }
+    let cancelled = false
     setUnifiedLoading(true)
-    getSharedTransactions(sharedAccount.id, dateFrom || undefined, dateTo || undefined, filterUserId)
-      .then(setUnifiedTxs)
-      .catch(() => setUnifiedTxs([]))
-      .finally(() => setUnifiedLoading(false))
-  }, [unifiedMode, sharedAccount?.id, filterUserId, dateFrom, dateTo]) // eslint-disable-line react-hooks/exhaustive-deps
+    getSharedTransactionsPage({
+      sharedAccountId: sharedAccount.id,
+      dateFrom:        dateFrom    || undefined,
+      dateTo:          dateTo      || undefined,
+      filterUserId,
+      search:          search      || undefined,
+      sortBy,
+      page:            currentPage,
+      pageSize,
+    })
+      .then(({ rows, totalCount: tc }) => { if (!cancelled) { setUnifiedTxs(rows); setTotalCount(tc) } })
+      .catch(() => { if (!cancelled) { setUnifiedTxs([]); setTotalCount(0) } })
+      .finally(() => { if (!cancelled) setUnifiedLoading(false) })
+    return () => { cancelled = true }
+  }, [unifiedMode, sharedAccount?.id, filterUserId, dateFrom, dateTo, sortBy, search, currentPage]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch unified transactions when partner makes a change (real-time broadcast)
+  // Re-fetch current page when partner makes a change (real-time broadcast)
   useEffect(() => {
     if (!lastSharedUpdate || !unifiedMode || !sharedAccount) return
     setUnifiedLoading(true)
-    getSharedTransactions(sharedAccount.id, dateFrom || undefined, dateTo || undefined, filterUserId)
-      .then(setUnifiedTxs)
+    getSharedTransactionsPage({
+      sharedAccountId: sharedAccount.id,
+      dateFrom:        dateFrom    || undefined,
+      dateTo:          dateTo      || undefined,
+      filterUserId,
+      search:          search      || undefined,
+      sortBy,
+      page:            currentPage,
+      pageSize,
+    })
+      .then(({ rows, totalCount: tc }) => {
+        setUnifiedTxs(rows)
+        setTotalCount(tc)
+        // If this page is now empty (e.g. after a delete) and there are previous pages, go back
+        if (rows.length === 0 && currentPage > 1) setCurrentPage((p) => p - 1)
+      })
       .catch(() => {})
       .finally(() => setUnifiedLoading(false))
   }, [lastSharedUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const displayTxs     = unifiedMode ? (search ? unifiedTxs.filter(t => t.description.toLowerCase().includes(search.toLowerCase())) : unifiedTxs) : transactions
+  const displayTxs     = unifiedMode ? unifiedTxs : transactions
   const displayLoading = unifiedMode ? unifiedLoading : loading
 
   const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
@@ -199,6 +230,7 @@ function TransactionsContent() {
     setSearch('')
     setCatFilter('')
     setSortBy('date')
+    setCurrentPage(1)
     const { dateFrom: f, dateTo: t } = monthRange(selectedMonth)
     setDateFrom(f)
     setDateTo(t)
@@ -218,6 +250,7 @@ function TransactionsContent() {
     : null
   const activeViewKey = !unifiedMode ? 'personal' : (filterUserId ?? 'all')
   function selectView(key: string) {
+    setCurrentPage(1)
     if (key === 'personal') { setUnifiedMode(false); return }
     setUnifiedMode(true)
     setFilterUserId(key === 'all' ? null : key)
@@ -237,7 +270,7 @@ function TransactionsContent() {
         <div>
           <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Extrato</h1>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-            {displayLoading ? 'Carregando…' : `${displayTxs.length} lançamentos · ${formatCurrency(total)}`}
+            {displayLoading ? 'Carregando…' : unifiedMode ? `${totalCount} lançamentos` : `${displayTxs.length} lançamentos · ${formatCurrency(total)}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -272,10 +305,10 @@ function TransactionsContent() {
               className="w-full bg-white/[.05] border border-white/[.09] rounded-2xl pl-9 pr-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/20 focus:bg-white/[.07] transition-all"
               placeholder="Buscar lançamento…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+              <button onClick={() => { setSearch(''); setCurrentPage(1) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
                 <X size={13} />
               </button>
             )}
@@ -308,13 +341,13 @@ function TransactionsContent() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] uppercase tracking-widest text-white/30">De</label>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1) }}
                   className="h-10 bg-white/[.05] border border-white/[.09] rounded-xl px-3 text-sm text-white outline-none" />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] uppercase tracking-widest text-white/30">Até</label>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1) }}
                   className="h-10 bg-white/[.05] border border-white/[.09] rounded-xl px-3 text-sm text-white outline-none" />
               </div>
 
@@ -324,7 +357,7 @@ function TransactionsContent() {
                   {(['date', 'value'] as const).map((opt) => (
                     <button
                       key={opt}
-                      onClick={() => setSortBy(opt)}
+                      onClick={() => { setSortBy(opt); setCurrentPage(1) }}
                       className="flex-1 text-[11px] font-semibold transition-all"
                       style={{
                         background: sortBy === opt ? 'var(--accent)' : 'transparent',
@@ -371,6 +404,31 @@ function TransactionsContent() {
           description={hasFilters ? 'Tente ajustar os filtros' : 'Clique em "Novo" para adicionar seu primeiro lançamento'}
           action={hasFilters ? <Button variant="secondary" size="sm" onClick={clearFilters}>Limpar filtros</Button> : undefined}
         />
+      )}
+
+      {/* Pagination — unified mode only, when there is more than one page */}
+      {unifiedMode && !displayLoading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Anterior
+          </Button>
+          <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+            Página {currentPage} de {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+          >
+            Próxima
+          </Button>
+        </div>
       )}
 
       <TransactionForm

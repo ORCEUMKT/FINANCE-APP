@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getDashboardMetrics, type DashboardMetrics } from '@/services/dashboardService'
-import { getCached, setCached } from '@/lib/queryCache'
+import { getCached, setCached, subscribeInvalidation } from '@/lib/queryCache'
 
 export function useDashboardMetrics(dateFrom?: string, dateTo?: string) {
   const cacheKey = `dashboard:${dateFrom}:${dateTo}`
@@ -26,6 +26,13 @@ export function useDashboardMetrics(dateFrom?: string, dateTo?: string) {
   }, [cacheKey, dateFrom, dateTo]) // eslint-disable-line
 
   useEffect(() => { fetch() }, [fetch])
+
+  // Refetch imediato quando o cache deste prefixo for invalidado externamente (ex: broadcast tx_change)
+  useEffect(() => {
+    return subscribeInvalidation((prefix) => {
+      if (cacheKey.startsWith(prefix)) fetch()
+    })
+  }, [cacheKey, fetch])
 
   return { metrics, loading, error, refetch: fetch }
 }

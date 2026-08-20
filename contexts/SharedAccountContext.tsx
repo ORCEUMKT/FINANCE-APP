@@ -8,6 +8,7 @@ import {
   countSharedCategories,
 } from '@/services/sharedAccountService'
 import type { SharedAccount, SharedAccountMemberWithProfile } from '@/types/sharedAccount'
+import { invalidateByPrefix } from '@/lib/queryCache'
 
 interface SharedAccountCtx {
   sharedAccount: SharedAccount | null
@@ -24,6 +25,8 @@ interface SharedAccountCtx {
   refresh: () => void
   lastSharedUpdate: number
   broadcastChange: () => void
+  lastCategoryUpdate: number
+  broadcastCategoryChange: () => void
 }
 
 const SharedAccountContext = createContext<SharedAccountCtx>({
@@ -41,6 +44,8 @@ const SharedAccountContext = createContext<SharedAccountCtx>({
   refresh: () => {},
   lastSharedUpdate: 0,
   broadcastChange: () => {},
+  lastCategoryUpdate: 0,
+  broadcastCategoryChange: () => {},
 })
 
 export function SharedAccountProvider({ children }: { children: ReactNode }) {
@@ -58,6 +63,7 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [needsCategorySetup, setNeedsCategorySetup] = useState(false)
   const [lastSharedUpdate, setLastSharedUpdate] = useState(0)
+  const [lastCategoryUpdate, setLastCategoryUpdate] = useState(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null)
 
@@ -145,7 +151,12 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
     const channel = supabase
       .channel(`shared:${sharedAccount.id}`)
       .on('broadcast', { event: 'tx_change' }, () => {
+        invalidateByPrefix('transactions:')
+        invalidateByPrefix('dashboard:')
         setLastSharedUpdate(Date.now())
+      })
+      .on('broadcast', { event: 'cat_change' }, () => {
+        setLastCategoryUpdate(Date.now())
       })
       .subscribe()
     channelRef.current = channel
@@ -156,10 +167,18 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
   }, [sharedAccount?.id, members.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function broadcastChange() {
-    // Update local state immediately (broadcast doesn't echo back to sender)
+    // O sender não recebe o próprio broadcast — invalida localmente antes de enviar
+    invalidateByPrefix('transactions:')
+    invalidateByPrefix('dashboard:')
     setLastSharedUpdate(Date.now())
     if (!channelRef.current) return
     channelRef.current.send({ type: 'broadcast', event: 'tx_change', payload: {} }).catch(() => {})
+  }
+
+  function broadcastCategoryChange() {
+    setLastCategoryUpdate(Date.now())
+    if (!channelRef.current) return
+    channelRef.current.send({ type: 'broadcast', event: 'cat_change', payload: {} }).catch(() => {})
   }
 
   function setUnifiedMode(v: boolean) {
@@ -212,6 +231,8 @@ export function SharedAccountProvider({ children }: { children: ReactNode }) {
       refresh: load,
       lastSharedUpdate,
       broadcastChange,
+      lastCategoryUpdate,
+      broadcastCategoryChange,
     }}>
       {children}
     </SharedAccountContext.Provider>
