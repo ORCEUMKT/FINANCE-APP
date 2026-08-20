@@ -47,6 +47,7 @@ export default function DashboardPage() {
     unifiedMode, filterUserId,
     setUnifiedMode, setFilterUserId,
     lastSharedUpdate, broadcastChange,
+    loading: sharedLoading,
   } = useSharedAccount()
 
   const { metrics: unifiedMetrics, loading: unifiedLoading, refetch: unifiedRefetch, error: unifiedError } = useUnifiedDashboardMetrics(
@@ -57,7 +58,7 @@ export default function DashboardPage() {
   )
 
   const metrics  = unifiedMode ? unifiedMetrics  : personalMetrics
-  const loading  = unifiedMode ? unifiedLoading  : personalLoading
+  const loading  = sharedLoading || (unifiedMode ? unifiedLoading  : personalLoading)
   const refetch  = unifiedMode ? unifiedRefetch  : personalRefetch
 
   // Re-fetch unified metrics when partner makes a change (real-time broadcast)
@@ -340,6 +341,14 @@ export default function DashboardPage() {
             <Button onClick={() => router.push('/transactions?new=1')} size="sm">
               <Plus size={13} /> Lançamento
             </Button>
+            <VoiceMicButton
+              onResult={(transcript) => {
+                const parsed = parseVoiceInput(transcript)
+                toast(`Detectado: "${transcript}"`)
+                openForm(parsed)
+              }}
+              onError={(msg) => toast(msg)}
+            />
           </div>
         </div>
 
