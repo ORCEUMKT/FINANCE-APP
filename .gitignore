@@ -35,6 +35,10 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# load test — secrets and generated reports
+load-test/.env.test
+load-test/reports/
+
 # vercel
 .vercel
 
