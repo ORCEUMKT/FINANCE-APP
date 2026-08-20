@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/client'
-import { getSharedTransactions } from '@/services/sharedAccountService'
 import type { Transaction } from '@/types/transaction'
 
 export interface DashboardMetrics {
@@ -133,6 +132,26 @@ export async function getDashboardMetrics(
 ): Promise<DashboardMetrics> {
   const supabase = createClient()
 
+  const { data, error } = await supabase.rpc('get_personal_dashboard_metrics', {
+    p_date_from: dateFrom ?? null,
+    p_date_to:   dateTo   ?? null,
+  })
+
+  if (error) throw error
+  return data as unknown as DashboardMetrics
+}
+
+/**
+ * Fallback — client-side path using the raw table query.
+ * Keep until RPC is validated in production, then remove.
+ * To activate: swap getDashboardMetrics above to call this instead.
+ */
+export async function getDashboardMetricsLegacy(
+  dateFrom?: string,
+  dateTo?: string
+): Promise<DashboardMetrics> {
+  const supabase = createClient()
+
   let query = supabase
     .from('transactions')
     .select('*, category:categories(*)')
@@ -153,6 +172,13 @@ export async function getUnifiedDashboardMetrics(
   dateFrom?: string,
   dateTo?: string
 ): Promise<DashboardMetrics> {
-  const txs = await getSharedTransactions(sharedAccountId, dateFrom, dateTo, filterUserId)
-  return computeMetrics(txs)
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc('get_shared_dashboard_metrics', {
+    p_shared_account_id: sharedAccountId,
+    p_filter_user_id:    filterUserId ?? null,
+    p_date_from:         dateFrom     ?? null,
+    p_date_to:           dateTo       ?? null,
+  })
+  if (error) throw error
+  return data as unknown as DashboardMetrics
 }

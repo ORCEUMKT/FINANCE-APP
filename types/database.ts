@@ -38,7 +38,21 @@ export type Database = {
       }
     }
     Views:     { [_ in never]: never }
-    Functions: { [_ in never]: never }
+    Functions: {
+      get_personal_dashboard_metrics: {
+        Args: { p_date_from: string | null; p_date_to: string | null }
+        Returns: Json
+      }
+      get_shared_dashboard_metrics: {
+        Args: {
+          p_shared_account_id: string
+          p_filter_user_id?:   string | null
+          p_date_from?:        string | null
+          p_date_to?:          string | null
+        }
+        Returns: Json
+      }
+    }
     Enums:     { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
   }

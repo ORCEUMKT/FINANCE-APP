@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { parseInstallment } from '@/lib/installments'
+import { parseInstallment, installmentGroupDescriptions } from '@/lib/installments'
 import type {
   Transaction,
   TransactionInsert,
@@ -106,15 +106,17 @@ export async function markAsRecovered(id: string): Promise<Transaction> {
 export async function deleteInstallmentGroup(transaction: Transaction): Promise<string[]> {
   const supabase = createClient()
   const parsed = parseInstallment(transaction.description)
-  if (!parsed) {
+  const groupDescriptions = parsed ? installmentGroupDescriptions(parsed) : null
+  if (!groupDescriptions) {
     await deleteTransaction(transaction.id)
     return [transaction.id]
   }
 
-  const { data: siblings } = await supabase
+  const { data: siblings, error: siblingsError } = await supabase
     .from('transactions')
     .select('id')
-    .ilike('description', `${parsed.base} (%/${parsed.total})`)
+    .in('description', groupDescriptions)
+  if (siblingsError) throw siblingsError
 
   const ids = (siblings ?? []).map((s: { id: string }) => s.id)
   if (ids.length === 0) {
@@ -133,7 +135,8 @@ export async function updateInstallmentGroupDates(
 ): Promise<void> {
   const supabase = createClient()
   const parsed = parseInstallment(transaction.description)
-  if (!parsed) {
+  const groupDescriptions = parsed ? installmentGroupDescriptions(parsed) : null
+  if (!groupDescriptions) {
     await updateTransaction(transaction.id, { date: newDate })
     return
   }
@@ -142,10 +145,11 @@ export async function updateInstallmentGroupDates(
   const newMs = new Date(newDate + 'T00:00:00').getTime()
   const deltaDays = Math.round((newMs - origMs) / (1000 * 60 * 60 * 24))
 
-  const { data: siblings } = await supabase
+  const { data: siblings, error: siblingsError } = await supabase
     .from('transactions')
     .select('id, date')
-    .ilike('description', `${parsed.base} (%/${parsed.total})`)
+    .in('description', groupDescriptions)
+  if (siblingsError) throw siblingsError
 
   if (!siblings || siblings.length === 0) {
     await updateTransaction(transaction.id, { date: newDate })
