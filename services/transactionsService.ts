@@ -5,6 +5,7 @@ import type {
   TransactionInsert,
   TransactionUpdate,
   TransactionFilters,
+  PersonalTransactionsPageResult,
 } from '@/types/transaction'
 
 export async function getTransactions(filters?: TransactionFilters): Promise<Transaction[]> {
@@ -43,6 +44,36 @@ export async function getTransactions(filters?: TransactionFilters): Promise<Tra
   const { data, error } = await query
   if (error) throw error
   return data as unknown as Transaction[]
+}
+
+export async function getPersonalTransactionsPage(params: {
+  dateFrom?: string | null
+  dateTo?: string | null
+  categoryId?: string | null
+  search?: string | null
+  sortBy?: 'date' | 'value'
+  page?: number
+  pageSize?: number
+}): Promise<PersonalTransactionsPageResult> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc('get_personal_transactions_page', {
+    p_date_from:   params.dateFrom   ?? null,
+    p_date_to:     params.dateTo     ?? null,
+    p_category_id: params.categoryId ?? null,
+    p_search:      params.search     ?? null,
+    p_type:        null,
+    p_status:      null,
+    p_sort_by:     params.sortBy     ?? 'date',
+    p_page:        params.page       ?? 1,
+    p_page_size:   params.pageSize   ?? 50,
+  })
+  if (error) throw error
+  const payload = data as { total_count: number; total_value: number; rows: unknown[] } | null
+  return {
+    total_count: payload?.total_count ?? 0,
+    total_value: payload?.total_value ?? 0,
+    rows: (payload?.rows ?? []) as Transaction[],
+  }
 }
 
 export async function createTransaction(payload: TransactionInsert): Promise<Transaction> {

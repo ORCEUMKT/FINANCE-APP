@@ -42,3 +42,9 @@ export interface TransactionFilters {
   date_to?: string | null
   sort_by?: 'date' | 'value'
 }
+
+export interface PersonalTransactionsPageResult {
+  total_count: number
+  total_value: number
+  rows: Transaction[]
+}

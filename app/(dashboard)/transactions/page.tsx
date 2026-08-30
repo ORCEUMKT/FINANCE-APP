@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
-import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
@@ -13,6 +12,15 @@ import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthP
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
 import { getSharedTransactionsPage, getSharedCategories } from '@/services/sharedAccountService'
+import {
+  getPersonalTransactionsPage,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  markAsRecovered,
+  deleteInstallmentGroup,
+  updateInstallmentGroupDates,
+} from '@/services/transactionsService'
 import type { SharedCategory } from '@/types/sharedAccount'
 import type { Category } from '@/types/category'
 import { Button } from '@/components/ui/Button'
@@ -64,15 +72,14 @@ function TransactionsContent() {
   const [totalCount, setTotalCount]   = useState(0)
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
-  const filters = {
-    search: search || undefined,
-    category_id: catFilter || undefined,
-    date_from: dateFrom || undefined,
-    date_to: dateTo || undefined,
-    sort_by: sortBy,
-  }
+  // Personal paginated state
+  const [personalTxs, setPersonalTxs]               = useState<Transaction[]>([])
+  const [personalLoading, setPersonalLoading]       = useState(false)
+  const [personalTotalValue, setPersonalTotalValue] = useState(0)
+  const [personalError, setPersonalError]           = useState<string | null>(null)
+  const [personalTick, setPersonalTick]             = useState(0)
+  const bumpPersonal = useCallback(() => setPersonalTick((n) => n + 1), [])
 
-  const { transactions, loading, refetch, add, update, remove, markRecovered, removeGroup, updateGroupDates } = useTransactions(filters)
   const { categories } = useCategories()
   const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange, lastCategoryUpdate } = useSharedAccount()
 
@@ -107,8 +114,8 @@ function TransactionsContent() {
   }, [unifiedMode, sharedCats, categories])
 
   // Unified transactions state
-  const [unifiedTxs, setUnifiedTxs]           = useState<Transaction[]>([])
-  const [unifiedLoading, setUnifiedLoading]   = useState(false)
+  const [unifiedTxs, setUnifiedTxs]         = useState<Transaction[]>([])
+  const [unifiedLoading, setUnifiedLoading] = useState(false)
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -154,42 +161,78 @@ function TransactionsContent() {
       .catch(() => {})
       .finally(() => setUnifiedLoading(false))
   }, [lastSharedUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Personal paginated fetch
+  useEffect(() => {
+    if (unifiedMode) return
+    let cancelled = false
+    setPersonalLoading(true)
+    setPersonalError(null)
+    getPersonalTransactionsPage({
+      dateFrom:   dateFrom   || null,
+      dateTo:     dateTo     || null,
+      categoryId: catFilter  || null,
+      search:     search     || null,
+      sortBy,
+      page:       currentPage,
+      pageSize,
+    })
+      .then(({ rows, total_count, total_value }) => {
+        if (!cancelled) {
+          setPersonalTxs(rows)
+          setTotalCount(total_count)
+          setPersonalTotalValue(total_value)
+          if (rows.length === 0 && currentPage > 1) setCurrentPage((p) => p - 1)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setPersonalTxs([])
+          setTotalCount(0)
+          setPersonalTotalValue(0)
+          setPersonalError(err instanceof Error ? err.message : 'Erro ao carregar lançamentos')
+        }
+      })
+      .finally(() => { if (!cancelled) setPersonalLoading(false) })
+    return () => { cancelled = true }
+  }, [unifiedMode, dateFrom, dateTo, catFilter, search, sortBy, currentPage, personalTick]) // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const displayTxs     = unifiedMode ? unifiedTxs : transactions
-  const displayLoading = unifiedMode ? unifiedLoading : loading
+  const displayTxs     = unifiedMode ? unifiedTxs : personalTxs
+  const displayLoading = unifiedMode ? unifiedLoading : personalLoading
 
   const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
     if (editing) {
       if (options?.cascadeDates && data.date !== editing.date) {
-        await updateGroupDates(editing, data.date)
-        await update(editing.id, data)
-        refetch()
+        await updateInstallmentGroupDates(editing, data.date)
+        await updateTransaction(editing.id, data)
       } else {
-        await update(editing.id, data)
+        await updateTransaction(editing.id, data)
       }
       toast('Lançamento atualizado!')
     } else {
-      await add(data)
+      await createTransaction(data)
       toast('Lançamento adicionado!')
     }
     broadcastChange()
+    bumpPersonal()
     setEditing(null)
     setFormOpen(false)
-  }, [editing, add, update, updateGroupDates, refetch, toast, broadcastChange])
+  }, [editing, toast, broadcastChange, bumpPersonal])
 
   const handleDelete = useCallback(async (id: string) => {
-    const tx = transactions.find((t) => t.id === id)
+    const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)
     if (!tx) return
     setDeletedBuffer(tx)
-    await remove(id)
+    await deleteTransaction(id)
     broadcastChange()
+    bumpPersonal()
     toast('Lançamento excluído.', {
       action: {
         label: 'Desfazer',
         onClick: async () => {
           if (!deletedBuffer) return
-          await add({
+          await createTransaction({
             description: deletedBuffer.description,
             value: deletedBuffer.value,
             date: deletedBuffer.date,
@@ -199,32 +242,35 @@ function TransactionsContent() {
             notes: deletedBuffer.notes,
           })
           broadcastChange()
+          bumpPersonal()
           toast('Exclusão desfeita!')
         },
       },
     })
-  }, [transactions, remove, add, toast, deletedBuffer, broadcastChange])
+  }, [unifiedMode, unifiedTxs, personalTxs, broadcastChange, bumpPersonal, toast, deletedBuffer])
 
   const handleDeleteGroup = useCallback(async (tx: Transaction) => {
-    await removeGroup(tx)
+    await deleteInstallmentGroup(tx)
     broadcastChange()
+    bumpPersonal()
     toast('Todas as parcelas excluídas!')
-  }, [removeGroup, toast, broadcastChange])
+  }, [toast, broadcastChange, bumpPersonal])
 
   const handleDuplicate = useCallback((id: string) => {
-    const tx = transactions.find((t) => t.id === id)
+    const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)
     if (!tx) return
     setDuplicating(tx)
     setEditing(null)
     setVoicePrefill(null)
     setFormOpen(true)
-  }, [transactions])
+  }, [unifiedMode, unifiedTxs, personalTxs])
 
   const handleMarkRecovered = useCallback(async (id: string) => {
-    await markRecovered(id)
+    await markAsRecovered(id)
     broadcastChange()
+    bumpPersonal()
     toast('Marcado como recuperado!')
-  }, [markRecovered, toast, broadcastChange])
+  }, [toast, broadcastChange, bumpPersonal])
 
   function clearFilters() {
     setSearch('')
@@ -236,7 +282,6 @@ function TransactionsContent() {
     setDateTo(t)
   }
   const hasFilters = search || catFilter
-  const total = displayTxs.reduce((s, t) => s + t.value, 0)
 
   // Account view selector (mirrored from dashboard)
   const viewOptions = sharedAccount && members.length >= 2
@@ -270,7 +315,11 @@ function TransactionsContent() {
         <div>
           <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-1)' }}>Extrato</h1>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-            {displayLoading ? 'Carregando…' : unifiedMode ? `${totalCount} lançamentos` : `${displayTxs.length} lançamentos · ${formatCurrency(total)}`}
+            {displayLoading
+              ? 'Carregando…'
+              : unifiedMode
+                ? `${totalCount} lançamentos`
+                : `${totalCount} lançamentos · ${formatCurrency(personalTotalValue)}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -331,7 +380,7 @@ function TransactionsContent() {
                 <label className="text-[10px] uppercase tracking-widest text-white/30">Categoria</label>
                 <select
                   value={catFilter}
-                  onChange={(e) => setCatFilter(e.target.value)}
+                  onChange={(e) => { setCatFilter(e.target.value); setCurrentPage(1) }}
                   className="h-10 bg-white/[.05] border border-white/[.09] rounded-xl px-3 text-sm text-white outline-none"
                 >
                   <option value="">Todas</option>
@@ -378,6 +427,11 @@ function TransactionsContent() {
         )}
       </div>
 
+      {/* Personal error */}
+      {!unifiedMode && personalError && (
+        <p className="text-xs text-red-400 px-1">{personalError}</p>
+      )}
+
       {/* List */}
       {displayLoading ? (
         <div className="flex justify-center py-14">
@@ -406,8 +460,8 @@ function TransactionsContent() {
         />
       )}
 
-      {/* Pagination — unified mode only, when there is more than one page */}
-      {unifiedMode && !displayLoading && totalPages > 1 && (
+      {/* Pagination */}
+      {!displayLoading && totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 pt-1">
           <Button
             variant="secondary"
