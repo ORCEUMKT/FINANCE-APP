@@ -79,6 +79,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_personal_abc_data: {
+        Args: {
+          p_date_from?: string | null
+          p_date_to?:   string | null
+          p_type?:      string | null
+        }
+        Returns: Json
+      }
     }
     Enums:     { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

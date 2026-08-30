@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import { TrendingUp } from 'lucide-react'
-import { useTransactions } from '@/hooks/useTransactions'
+import { usePersonalABC } from '@/hooks/usePersonalABC'
 import { MonthPicker, monthRange } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/lib/formatters'
+import type { ABCTransaction } from '@/types/transaction'
 
 type ABCClass = 'A' | 'B' | 'C'
 type TxType = 'expense' | 'income'
@@ -34,7 +35,7 @@ const CLASS_DESC: Record<ABCClass, string> = {
   C: 'Baixa prioridade',
 }
 
-function useABC(transactions: ReturnType<typeof useTransactions>['transactions']) {
+function useABC(transactions: ABCTransaction[]) {
   return useMemo(() => {
     const map = new Map<string, { name: string; color: string; total: number; count: number }>()
 
@@ -77,11 +78,11 @@ export default function ABCPage() {
   const [activeType, setActiveType] = useState<TxType>('expense')
   const { dateFrom, dateTo } = monthRange(selectedMonth)
 
-  const { transactions: expenseTxs, loading: loadingExp } = useTransactions({
-    date_from: dateFrom, date_to: dateTo, type: 'expense',
+  const { transactions: expenseTxs, loading: loadingExp, error: errorExp } = usePersonalABC({
+    dateFrom, dateTo, type: 'expense',
   })
-  const { transactions: incomeTxs, loading: loadingInc } = useTransactions({
-    date_from: dateFrom, date_to: dateTo, type: 'income',
+  const { transactions: incomeTxs, loading: loadingInc, error: errorInc } = usePersonalABC({
+    dateFrom, dateTo, type: 'income',
   })
 
   const expenseABC = useABC(expenseTxs)
@@ -89,6 +90,7 @@ export default function ABCPage() {
 
   const { items, grandTotal, summary } = activeType === 'expense' ? expenseABC : incomeABC
   const loading = activeType === 'expense' ? loadingExp : loadingInc
+  const error   = activeType === 'expense' ? errorExp   : errorInc
 
   const pctA = grandTotal > 0 ? (summary.A.total / grandTotal) * 100 : 0
   const pctB = grandTotal > 0 ? (summary.B.total / grandTotal) * 100 : 0
@@ -141,6 +143,8 @@ export default function ABCPage() {
             style={{ borderColor: 'var(--border-md)', borderTopColor: 'var(--accent)' }}
           />
         </div>
+      ) : error ? (
+        <p className="py-8 text-center text-sm" style={{ color: 'var(--red)' }}>{error}</p>
       ) : items.length === 0 ? (
         <EmptyState
           icon={TrendingUp}

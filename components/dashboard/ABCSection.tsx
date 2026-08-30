@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import { TrendingUp } from 'lucide-react'
-import { useTransactions } from '@/hooks/useTransactions'
+import { usePersonalABC } from '@/hooks/usePersonalABC'
 import { monthRange } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/lib/formatters'
+import type { ABCTransaction } from '@/types/transaction'
 
 type ABCClass = 'A' | 'B' | 'C'
 type TxType   = 'expense' | 'income'
@@ -41,7 +42,7 @@ interface ABCItem {
   cls: ABCClass
 }
 
-function buildABCByCategory(transactions: ReturnType<typeof useTransactions>['transactions']): {
+function buildABCByCategory(transactions: ABCTransaction[]): {
   items: ABCItem[]
   grandTotal: number
   summary: Record<ABCClass, { count: number; total: number }>
@@ -79,7 +80,7 @@ function buildABCByCategory(transactions: ReturnType<typeof useTransactions>['tr
   return { items, grandTotal, summary }
 }
 
-function buildABCByTransaction(transactions: ReturnType<typeof useTransactions>['transactions']): {
+function buildABCByTransaction(transactions: ABCTransaction[]): {
   items: ABCItem[]
   grandTotal: number
   summary: Record<ABCClass, { count: number; total: number }>
@@ -118,15 +119,16 @@ export function ABCSection() {
   const [viewMode, setViewMode]     = useState<ViewMode>('category')
   const { dateFrom, dateTo } = monthRange(selectedMonth)
 
-  const { transactions: expenseTxs, loading: loadingExp } = useTransactions({
-    date_from: dateFrom, date_to: dateTo, type: 'expense',
+  const { transactions: expenseTxs, loading: loadingExp, error: errorExp } = usePersonalABC({
+    dateFrom, dateTo, type: 'expense',
   })
-  const { transactions: incomeTxs, loading: loadingInc } = useTransactions({
-    date_from: dateFrom, date_to: dateTo, type: 'income',
+  const { transactions: incomeTxs, loading: loadingInc, error: errorInc } = usePersonalABC({
+    dateFrom, dateTo, type: 'income',
   })
 
   const rawTxs  = activeType === 'expense' ? expenseTxs : incomeTxs
   const loading = activeType === 'expense' ? loadingExp : loadingInc
+  const error   = activeType === 'expense' ? errorExp   : errorInc
 
   const abcByCategory    = useMemo(() => buildABCByCategory(rawTxs),    [rawTxs])
   const abcByTransaction = useMemo(() => buildABCByTransaction(rawTxs), [rawTxs])
@@ -190,6 +192,8 @@ export function ABCSection() {
             style={{ borderColor: 'var(--border-md)', borderTopColor: 'var(--accent)' }}
           />
         </div>
+      ) : error ? (
+        <p className="py-8 text-center text-sm" style={{ color: 'var(--red)' }}>{error}</p>
       ) : items.length === 0 ? (
         <EmptyState
           icon={TrendingUp}

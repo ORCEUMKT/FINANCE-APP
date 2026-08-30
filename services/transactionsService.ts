@@ -6,6 +6,7 @@ import type {
   TransactionUpdate,
   TransactionFilters,
   PersonalTransactionsPageResult,
+  ABCTransaction,
 } from '@/types/transaction'
 
 export async function getTransactions(filters?: TransactionFilters): Promise<Transaction[]> {
@@ -74,6 +75,21 @@ export async function getPersonalTransactionsPage(params: {
     total_value: payload?.total_value ?? 0,
     rows: (payload?.rows ?? []) as Transaction[],
   }
+}
+
+export async function getPersonalABCData(params: {
+  dateFrom: string
+  dateTo: string
+  type?: 'expense' | 'income' | 'recover' | null
+}): Promise<ABCTransaction[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase.rpc('get_personal_abc_data', {
+    p_date_from: params.dateFrom,
+    p_date_to:   params.dateTo,
+    p_type:      params.type ?? null,
+  })
+  if (error) throw error
+  return (data ?? []) as unknown as ABCTransaction[]
 }
 
 export async function createTransaction(payload: TransactionInsert): Promise<Transaction> {
