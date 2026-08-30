@@ -48,3 +48,11 @@ export interface PersonalTransactionsPageResult {
   total_value: number
   rows: Transaction[]
 }
+
+export interface ABCTransaction {
+  id: string
+  value: number
+  description: string
+  category_id: string | null
+  category: { name: string; color: string } | null
+}
