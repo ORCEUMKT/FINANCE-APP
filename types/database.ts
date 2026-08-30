@@ -65,6 +65,20 @@ export type Database = {
         }
         Returns: Json
       }
+      get_personal_transactions_page: {
+        Args: {
+          p_date_from?:   string | null
+          p_date_to?:     string | null
+          p_category_id?: string | null
+          p_search?:      string | null
+          p_type?:        string | null
+          p_status?:      string | null
+          p_sort_by?:     string | null
+          p_page?:        number
+          p_page_size?:   number
+        }
+        Returns: Json
+      }
     }
     Enums:     { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
