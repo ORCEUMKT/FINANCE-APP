@@ -1,16 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { forgotPassword } from '@/services/authService'
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail]   = useState('')
-  const [sent, setSent]     = useState(false)
-  const [error, setError]   = useState('')
+const LINK_ERRORS: Record<string, string> = {
+  link_invalid: 'O link de redefinição é inválido. Solicite um novo abaixo.',
+  link_expired: 'O link de redefinição expirou. Solicite um novo abaixo.',
+}
+
+function ForgotPasswordForm() {
+  const params     = useSearchParams()
+  const errorParam = params.get('error')
+  const linkError  = errorParam ? (LINK_ERRORS[errorParam] ?? null) : null
+
+  const [email, setEmail]     = useState('')
+  const [sent, setSent]       = useState(false)
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -43,6 +53,12 @@ export default function ForgotPasswordPage() {
       <h1 className="text-xl font-800 text-white mb-1">Recuperar senha</h1>
       <p className="text-sm text-white/40 mb-7">Enviaremos um link de redefinição</p>
 
+      {linkError && (
+        <p className="text-xs text-amber-400 bg-amber-500/[.08] border border-amber-500/20 rounded-xl px-3 py-2 mb-4">
+          {linkError}
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
           label="E-mail"
@@ -62,5 +78,13 @@ export default function ForgotPasswordPage() {
         <Link href="/login" className="text-white/60 hover:text-white transition-colors">← Voltar para o login</Link>
       </p>
     </Card>
+  )
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
   )
 }
