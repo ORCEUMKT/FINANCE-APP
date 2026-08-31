@@ -13,6 +13,26 @@ const LINK_ERRORS: Record<string, string> = {
   link_expired: 'O link de redefinição expirou. Solicite um novo abaixo.',
 }
 
+function resetErrorMessage(err: unknown): string {
+  if (err != null && typeof err === 'object') {
+    const e = err as { status?: number; code?: string; message?: string }
+    const status  = e.status
+    const code    = String(e.code    ?? '').toLowerCase()
+    const message = String(e.message ?? '').toLowerCase()
+
+    if (status === 429 || code.includes('rate') || message.includes('rate limit')) {
+      return 'Aguarde um momento antes de solicitar outro link.'
+    }
+    if (status === 422 || code.includes('user_not_found') || code.includes('invalid_email')) {
+      return 'Verifique o endereço de e-mail e tente novamente.'
+    }
+    if (status != null && status >= 500) {
+      return 'Não foi possível enviar o e-mail. Tente novamente em alguns instantes.'
+    }
+  }
+  return 'Erro ao enviar e-mail. Tente novamente.'
+}
+
 function ForgotPasswordForm() {
   const params     = useSearchParams()
   const errorParam = params.get('error')
@@ -31,7 +51,7 @@ function ForgotPasswordForm() {
       await forgotPassword(email)
       setSent(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar e-mail.')
+      setError(resetErrorMessage(err))
     } finally {
       setLoading(false)
     }
