@@ -29,7 +29,12 @@ function LoginForm() {
       router.push(redirect)
       router.refresh()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao entrar.')
+      const e = err as { code?: string; message?: string }
+      if (e.code === 'email_not_confirmed' || String(e.message ?? '').toLowerCase().includes('email not confirmed')) {
+        setError('Seu e-mail ainda não foi confirmado. Abra o link que enviamos para seu e-mail e tente entrar novamente.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Erro ao entrar.')
+      }
     } finally {
       setLoading(false)
     }

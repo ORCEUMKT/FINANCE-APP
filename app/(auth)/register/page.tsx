@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+  const [confirmed, setConfirmed] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,7 +30,11 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      await signUp(email, password, name)
+      const data = await signUp(email, password, name)
+      if (!data.session) {
+        setConfirmed(true)
+        return
+      }
       await seedDefaultCategories()
       router.push('/dashboard')
       router.refresh()
@@ -38,6 +43,21 @@ export default function RegisterPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (confirmed) {
+    return (
+      <Card className="p-7 text-center">
+        <div className="text-3xl mb-4">📬</div>
+        <h2 className="text-base font-800 text-white mb-2">Confirme seu e-mail</h2>
+        <p className="text-sm text-white/40 mb-1">Enviamos um link de confirmação para</p>
+        <p className="text-sm text-white font-600 mb-5">{email}</p>
+        <p className="text-sm text-white/40 mb-6">
+          Abra a mensagem e confirme sua conta antes de entrar no RIOW Finance.
+        </p>
+        <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors">← Voltar para o login</Link>
+      </Card>
+    )
   }
 
   return (
