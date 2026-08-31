@@ -1,0 +1,121 @@
+-- ============================================================
+-- MIGRATION 007 — performance_indexes
+-- ============================================================
+--
+-- PURPOSE
+-- ───────
+-- Add two missing B-tree indexes that close the performance gaps
+-- identified in PERF-DB-001 and confirmed by live pg_indexes query
+-- (PERF-DB-002).
+--
+-- Confirmed absent from production before this migration:
+--   transactions                  — no index on (user_id, date)
+--   shared_account_members        — no index starting with user_id
+--
+-- Confirmed already covered (NOT created here):
+--   shared_account_invites(token) — UNIQUE(token) already exists
+--   shared_account_members(shared_account_id, user_id)
+--                                 — UNIQUE(shared_account_id, user_id) already exists
+--
+-- !! APPLY MANUALLY IN SUPABASE SQL EDITOR — DO NOT RUN AUTOMATICALLY !!
+-- ============================================================
+--
+-- SAFETY CLASSIFICATION
+-- ─────────────────────
+-- Both statements are:
+--   • CREATE INDEX only — no ALTER TABLE, no DROP, no data mutation
+--   • IF NOT EXISTS — idempotent; safe to re-run on any already-migrated env
+--   • Non-unique — no constraint enforcement, no risk of violating existing data
+--   • No RLS/policy change — indexes do not alter row-level security
+--   • No function change — no stored procedures touched
+--
+-- LOCK CONSIDERATION
+-- ──────────────────
+-- Regular CREATE INDEX (not CONCURRENTLY) acquires ShareLock on the table.
+-- This blocks concurrent writes for the duration of the index build.
+--
+-- Evidence of table volume (PERF-DB-001 load-test, 2026-08-31):
+--   transactions:           ~8 000 rows (40 users × ~200 tx each)
+--   shared_account_members: ~80 rows maximum (40 accounts × 2 members)
+--
+-- At this volume, index build takes milliseconds. Lock window is negligible.
+-- CREATE INDEX CONCURRENTLY is deliberately NOT used because:
+--   a) Supabase SQL Editor runs statements inside a transaction block;
+--      CONCURRENTLY is forbidden inside explicit transactions and will error.
+--   b) The data volume does not justify the extra complexity.
+--
+-- If applied on a future database with millions of rows, revisit with
+-- CREATE INDEX CONCURRENTLY outside a transaction (e.g., via psql directly).
+--
+-- TECHNICAL DEBT NOTE
+-- ───────────────────
+-- Tables shared_accounts, shared_account_members, shared_account_invites,
+-- shared_categories, and shared_goals were created directly in the Supabase
+-- SQL Editor and are NOT represented in the versioned schema (schema.sql).
+-- This migration touches shared_account_members without owning its DDL.
+-- Full schema recovery for shared_* tables is out of scope for this migration.
+-- ============================================================
+
+
+-- ── Index 1 — transactions(user_id, date DESC) ────────────────────────────────
+--
+-- Hot paths covered:
+--   get_personal_dashboard_metrics  — RLS user_id + date BETWEEN
+--   get_personal_transactions_page  — base_filtered MATERIALIZED, same predicates
+--   get_personal_abc_data           — same predicate + type filter
+--   getTransactions (legacy)        — PostgREST, same filters
+--
+-- Without this index, every personal query performs a sequential scan of the
+-- entire transactions table filtered by the RLS predicate (user_id = auth.uid()).
+-- With this index, the planner uses an index scan anchored on the user's uuid,
+-- then walks the date sub-index in descending order — matching the ORDER BY
+-- date DESC used by all hot paths.
+--
+-- user_id first: highest selectivity — isolates one user's rows immediately.
+-- date DESC second: matches ORDER BY date DESC in all personal list queries,
+-- allowing index-only sort elimination for paginated results.
+--
+CREATE INDEX IF NOT EXISTS idx_transactions_user_date
+  ON public.transactions (user_id, date DESC);
+
+
+-- ── Index 2 — shared_account_members(user_id, status, joined_at DESC) ─────────
+--
+-- Hot paths covered:
+--   getMySharedAccount()  — bootstrap called on EVERY page load in shared layout:
+--     WHERE user_id = auth.uid() AND status = 'active'
+--     ORDER BY joined_at DESC LIMIT 1
+--
+--   Guard 1 in RPCs (shared_account_members used 2–3× per RPC call):
+--     WHERE shared_account_id = X AND user_id = auth.uid() AND status = 'active'
+--     (the UNIQUE(shared_account_id, user_id) covers the shared_account_id+user_id
+--      lookup; this index covers the user_id-first lookup in getMySharedAccount)
+--
+--   createSharedAccount / acceptInvite:
+--     WHERE user_id = auth.uid() AND status = 'active'  (membership existence check)
+--
+-- Evidence: p99 = 3623ms measured on layout_shared_check under load (PERF-DB-001).
+-- Pattern is a point lookup (LIMIT 1) — ideal for a B-tree index scan.
+--
+-- user_id first: anchors the lookup to one user.
+-- status second: discriminates 'active' vs 'left' — eliminates non-active rows.
+-- joined_at DESC third: included to cover the ORDER BY, allowing the planner
+-- to return the single row without a sort step.
+--
+-- Note: the existing UNIQUE(shared_account_id, user_id) already covers Guard 1
+-- for the (shared_account_id, user_id) lookup. This index is complementary, not
+-- redundant — it covers the orthogonal access pattern (user_id-first).
+--
+CREATE INDEX IF NOT EXISTS idx_shared_account_members_user_status_joined
+  ON public.shared_account_members (user_id, status, joined_at DESC);
+
+
+-- ── Rollback ───────────────────────────────────────────────────────────────────
+-- Both indexes are purely additive and carry no data risk.
+-- To rollback, drop them by name — no other action required.
+--
+-- DROP INDEX IF EXISTS public.idx_transactions_user_date;
+-- DROP INDEX IF EXISTS public.idx_shared_account_members_user_status_joined;
+--
+-- After rollback, queries return to sequential scans.
+-- No table structure, data, RLS policy, or function is affected.
