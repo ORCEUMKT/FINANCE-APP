@@ -19,6 +19,8 @@ export async function signUp(email: string, password: string, name: string) {
   if (data.user) {
     await supabase.from('profiles').upsert({ id: data.user.id, name })
   }
+
+  return data
 }
 
 export async function signOut() {
