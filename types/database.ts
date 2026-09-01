@@ -87,6 +87,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_users_names: {
+        Args: { p_user_ids: string[] }
+        Returns: { id: string; name: string | null }[]
+      }
     }
     Enums:     { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
