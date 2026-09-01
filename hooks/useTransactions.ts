@@ -88,9 +88,9 @@ export function useTransactions(filters?: TransactionFilters) {
   }, [cacheKey])
 
   const removeGroup = useCallback(async (transaction: Transaction) => {
-    const ids = await svc.deleteInstallmentGroup(transaction)
+    const result = await svc.deleteInstallmentGroup(transaction)
     setTransactions((prev) => {
-      const next = prev.filter((t) => !ids.includes(t.id))
+      const next = prev.filter((t) => !result.ids.includes(t.id))
       setCached(cacheKey, next)
       return next
     })

@@ -14,6 +14,7 @@ export interface Transaction {
   type: TransactionType
   status: TransactionStatus
   notes: string | null
+  installment_group_id: string | null
   created_at: string
   updated_at: string
   category?: Category | null
@@ -29,6 +30,7 @@ export type TransactionInsert = {
   type?: TransactionType
   status?: TransactionStatus
   notes?: string | null
+  installment_group_id?: string | null
 }
 
 export type TransactionUpdate = Partial<TransactionInsert>

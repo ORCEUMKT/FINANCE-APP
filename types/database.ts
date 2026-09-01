@@ -25,9 +25,9 @@ export type Database = {
         Relationships: []
       }
       transactions: {
-        Row:    { id: string; user_id: string; category_id: string | null; account_id: string | null; description: string; value: number; date: string; type: string; status: string; notes: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; user_id: string; category_id?: string | null; account_id?: string | null; description: string; value: number; date: string; type?: string; status?: string; notes?: string | null; created_at?: string; updated_at?: string }
-        Update: { id?: string; user_id?: string; category_id?: string | null; account_id?: string | null; description?: string; value?: number; date?: string; type?: string; status?: string; notes?: string | null }
+        Row:    { id: string; user_id: string; category_id: string | null; account_id: string | null; description: string; value: number; date: string; type: string; status: string; notes: string | null; installment_group_id: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; category_id?: string | null; account_id?: string | null; description: string; value: number; date: string; type?: string; status?: string; notes?: string | null; installment_group_id?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; category_id?: string | null; account_id?: string | null; description?: string; value?: number; date?: string; type?: string; status?: string; notes?: string | null; installment_group_id?: string | null }
         Relationships: []
       }
       category_goals: {

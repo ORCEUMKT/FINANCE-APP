@@ -232,11 +232,12 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
   const fieldError = (field: string) => errors.find((e) => e.field === field)?.message
 
-  const buildPayload = (i = 0, n = 1): TransactionInsert => ({
+  const buildPayload = (i = 0, n = 1, groupId?: string): TransactionInsert => ({
     description: n > 1 ? `${description.trim()} (${i + 1}/${n})` : description.trim(),
     value: parseFloat(value),
     date: addMonths(date, i),
     category_id: categoryId || null,
+    installment_group_id: groupId ?? null,
     type,
     status: type === 'recover' ? 'recoverable' : status,
     notes: notes.trim() || null,
@@ -263,8 +264,9 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
     setLoading(true)
     try {
       if (!isEdit && installments > 1) {
+        const groupId = crypto.randomUUID()
         for (let i = 0; i < installments; i++) {
-          await onSubmit(buildPayload(i, installments), options)
+          await onSubmit(buildPayload(i, installments, groupId), options)
         }
       } else {
         await onSubmit(payload, options)

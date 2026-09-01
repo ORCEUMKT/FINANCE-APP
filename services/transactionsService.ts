@@ -150,13 +150,36 @@ export async function markAsRecovered(id: string): Promise<Transaction> {
   return updateTransaction(id, { status: 'recovered' })
 }
 
-export async function deleteInstallmentGroup(transaction: Transaction): Promise<string[]> {
+export async function deleteInstallmentGroup(
+  transaction: Transaction,
+): Promise<{ ids: string[]; partial: boolean }> {
   const supabase = createClient()
+
+  // New series: has a stable group id — delete exactly those rows, no description collision possible.
+  if (transaction.installment_group_id) {
+    const { data: siblings, error: siblingsError } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('installment_group_id', transaction.installment_group_id)
+    if (siblingsError) throw siblingsError
+
+    const ids = (siblings ?? []).map((s: { id: string }) => s.id)
+    if (ids.length === 0) {
+      await deleteTransaction(transaction.id)
+      return { ids: [transaction.id], partial: false }
+    }
+
+    const { error } = await supabase.from('transactions').delete().in('id', ids)
+    if (error) throw error
+    return { ids, partial: false }
+  }
+
+  // Legacy series (no group id): description-based lookup with collision guard.
   const parsed = parseInstallment(transaction.description)
   const groupDescriptions = parsed ? installmentGroupDescriptions(parsed) : null
   if (!groupDescriptions) {
     await deleteTransaction(transaction.id)
-    return [transaction.id]
+    return { ids: [transaction.id], partial: false }
   }
 
   const { data: siblings, error: siblingsError } = await supabase
@@ -168,12 +191,20 @@ export async function deleteInstallmentGroup(transaction: Transaction): Promise<
   const ids = (siblings ?? []).map((s: { id: string }) => s.id)
   if (ids.length === 0) {
     await deleteTransaction(transaction.id)
-    return [transaction.id]
+    return { ids: [transaction.id], partial: false }
+  }
+
+  // Collision guard: more rows than the group should have means two series share these
+  // descriptions — fall back to deleting only the single clicked record to avoid
+  // destroying an unrelated series.
+  if (ids.length > groupDescriptions.length) {
+    await deleteTransaction(transaction.id)
+    return { ids: [transaction.id], partial: true }
   }
 
   const { error } = await supabase.from('transactions').delete().in('id', ids)
   if (error) throw error
-  return ids
+  return { ids, partial: false }
 }
 
 export async function updateInstallmentGroupDates(
@@ -181,16 +212,44 @@ export async function updateInstallmentGroupDates(
   newDate: string,
 ): Promise<void> {
   const supabase = createClient()
+
+  const origMs = new Date(transaction.date + 'T00:00:00').getTime()
+  const newMs = new Date(newDate + 'T00:00:00').getTime()
+  const deltaDays = Math.round((newMs - origMs) / (1000 * 60 * 60 * 24))
+
+  const shiftDate = (d: string) =>
+    new Date(new Date(d + 'T00:00:00').getTime() + deltaDays * 86400000)
+      .toISOString()
+      .slice(0, 10)
+
+  // New series: use group id to fetch siblings, no description collision possible.
+  if (transaction.installment_group_id) {
+    const { data: siblings, error: siblingsError } = await supabase
+      .from('transactions')
+      .select('id, date')
+      .eq('installment_group_id', transaction.installment_group_id)
+    if (siblingsError) throw siblingsError
+
+    if (!siblings || siblings.length === 0) {
+      await updateTransaction(transaction.id, { date: newDate })
+      return
+    }
+
+    await Promise.all(
+      (siblings as { id: string; date: string }[]).map((s) =>
+        updateTransaction(s.id, { date: shiftDate(s.date) }),
+      ),
+    )
+    return
+  }
+
+  // Legacy series: description-based lookup with collision guard.
   const parsed = parseInstallment(transaction.description)
   const groupDescriptions = parsed ? installmentGroupDescriptions(parsed) : null
   if (!groupDescriptions) {
     await updateTransaction(transaction.id, { date: newDate })
     return
   }
-
-  const origMs = new Date(transaction.date + 'T00:00:00').getTime()
-  const newMs = new Date(newDate + 'T00:00:00').getTime()
-  const deltaDays = Math.round((newMs - origMs) / (1000 * 60 * 60 * 24))
 
   const { data: siblings, error: siblingsError } = await supabase
     .from('transactions')
@@ -203,12 +262,18 @@ export async function updateInstallmentGroupDates(
     return
   }
 
+  // Collision guard: more rows than the group should have means two series share these
+  // descriptions — updating all of them would corrupt unrelated data, so abort.
+  if (siblings.length > groupDescriptions.length) {
+    throw new Error(
+      'Conflito de séries: mais parcelas do que o esperado foram encontradas. ' +
+      'Desmarque a atualização em grupo e salve apenas esta parcela.',
+    )
+  }
+
   await Promise.all(
-    (siblings as { id: string; date: string }[]).map((s) => {
-      const shifted = new Date(
-        new Date(s.date + 'T00:00:00').getTime() + deltaDays * 86400000,
-      ).toISOString().slice(0, 10)
-      return updateTransaction(s.id, { date: shifted })
-    }),
+    (siblings as { id: string; date: string }[]).map((s) =>
+      updateTransaction(s.id, { date: shiftDate(s.date) }),
+    ),
   )
 }

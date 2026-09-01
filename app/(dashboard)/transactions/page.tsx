@@ -250,10 +250,10 @@ function TransactionsContent() {
   }, [unifiedMode, unifiedTxs, personalTxs, broadcastChange, bumpPersonal, toast, deletedBuffer])
 
   const handleDeleteGroup = useCallback(async (tx: Transaction) => {
-    await deleteInstallmentGroup(tx)
+    const result = await deleteInstallmentGroup(tx)
     broadcastChange()
     bumpPersonal()
-    toast('Todas as parcelas excluídas!')
+    toast(result.partial ? 'Lançamento excluído.' : 'Todas as parcelas excluídas!')
   }, [toast, broadcastChange, bumpPersonal])
 
   const handleDuplicate = useCallback((id: string) => {
