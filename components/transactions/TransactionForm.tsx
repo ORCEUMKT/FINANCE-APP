@@ -202,15 +202,28 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
 
     setDocProcessing(true)
     setErrors([])
+
+    const GENERIC_ERR = 'Não foi possível ler este arquivo. Verifique o formato e tente novamente, ou preencha os dados manualmente.'
+    // Only status codes whose `error` body is authored by this server are safe to display.
+    const SAFE_STATUSES = new Set([400, 401, 413, 415, 422])
+
     try {
       const body = new FormData()
       body.append('file', file)
       const res = await fetch('/api/parse-document', { method: 'POST', body })
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error ?? 'Erro ao processar documento.')
+        const payload = await res.json().catch(() => ({}))
+        const msg = SAFE_STATUSES.has(res.status) && typeof payload.error === 'string'
+          ? payload.error
+          : GENERIC_ERR
+        throw new Error(msg)
       }
-      const data: DocPrefill = await res.json()
+      let data: DocPrefill
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error(GENERIC_ERR)
+      }
       data.fileName = file.name
       setDocPrefill(data)
 
@@ -224,7 +237,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
         if (catId) setCategoryId(catId)
       }
     } catch (err) {
-      setErrors([{ field: 'form', message: err instanceof Error ? err.message : 'Erro ao ler documento.' }])
+      setErrors([{ field: 'form', message: err instanceof Error ? err.message : GENERIC_ERR }])
     } finally {
       setDocProcessing(false)
     }
@@ -308,7 +321,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,application/pdf"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         className="hidden"
         onChange={handleDocUpload}
       />

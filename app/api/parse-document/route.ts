@@ -58,13 +58,26 @@ async function callOpenRouter(key: string, mimeType: string, base64: string): Pr
       }),
     })
 
-    if (res.ok) {
-      const data = await res.json()
-      return data.choices?.[0]?.message?.content ?? ''
+    if (!res.ok) {
+      // Erro HTTP: tenta o próximo modelo
+      continue
     }
 
-    // Qualquer erro não-ok: tenta o próximo modelo
-    continue
+    // Body pode ser vazio ou não-JSON em respostas de rate-limit/gateway free tier
+    let data: unknown
+    try {
+      data = await res.json()
+    } catch {
+      continue
+    }
+
+    const content = (data as { choices?: Array<{ message?: { content?: string } }> })
+      ?.choices?.[0]?.message?.content
+
+    // Conteúdo vazio ou nulo: trata como falha deste modelo e tenta o próximo
+    if (!content) continue
+
+    return content
   }
 
   throw new Error('Nenhum modelo de visão disponível no momento. Tente novamente em alguns instantes.')
@@ -110,7 +123,16 @@ export async function POST(request: Request) {
 
     const text = await callOpenRouter(key, mimeType, base64)
     const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
-    const parsed = JSON.parse(cleaned)
+
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch {
+      return NextResponse.json(
+        { error: 'Não foi possível interpretar o documento. Tente com uma imagem mais nítida.' },
+        { status: 422 },
+      )
+    }
 
     return NextResponse.json({
       description: parsed.description ?? null,
