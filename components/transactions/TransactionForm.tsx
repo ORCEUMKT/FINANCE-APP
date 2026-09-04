@@ -308,7 +308,7 @@ export function TransactionForm({ open, onClose, onSubmit, categories, editingTr
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,application/pdf"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         className="hidden"
         onChange={handleDocUpload}
       />
