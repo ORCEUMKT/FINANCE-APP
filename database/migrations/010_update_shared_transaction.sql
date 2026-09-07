@@ -154,16 +154,47 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- ── Guard 4: category_id must belong to the transaction owner ────────────────
+  --
+  -- The transactions table has no DB-level constraint preventing a category
+  -- owned by User B from being FK-referenced by a transaction owned by User A.
+  -- The invariant (categories.user_id = transactions.user_id) is enforced by
+  -- convention in the personal path — any cross-user write is blocked by RLS
+  -- before reaching the DB.
+  --
+  -- In the shared path (SECURITY DEFINER), RLS is bypassed, so this guard
+  -- enforces the invariant explicitly:
+  --
+  --   If p_category_id is provided, it must exist in public.categories AND
+  --   its user_id must equal the transaction owner's user_id (v_owner_user_id).
+  --
+  -- This prevents User B from assigning their own personal category to User A's
+  -- transaction. Such a mismatch would cause A's transaction to show no category
+  -- (the categories RLS "select own" would block A from reading B's category row).
+  --
+  -- NULL is allowed: clearing a category is a valid operation.
+  -- Caller-owned categories with the same UUID as an owner category are an
+  -- impossible edge case (UUIDs are unique across users).
+  if p_category_id is not null then
+    if not exists (
+      select 1
+      from public.categories
+      where id      = p_category_id
+        and user_id = v_owner_user_id
+    ) then
+      raise exception 'Not authorized: category does not belong to the transaction owner'
+        using errcode = 'P0001';
+    end if;
+  end if;
+
   -- ── Perform the update ─────────────────────────────────────────────────────
   --
   -- Explicit column list — no dynamic SQL. Only the allowlisted fields
   -- are touched. updated_at is managed by the trg_transactions_updated_at
   -- trigger (defined in schema.sql) and is NOT set here.
   --
-  -- p_notes and p_category_id may legitimately be NULL (removing a note
-  -- or clearing a category). NULL is treated as "set to NULL", not
-  -- "no change" — this matches the existing updateTransaction behaviour
-  -- where the full form payload is applied on every save.
+  -- p_notes: NULL = "clear this field". Matches existing updateTransaction semantics.
+  -- p_category_id: NULL = "clear category". Guard 4 above validates non-null values.
   with updated as (
     update public.transactions
     set

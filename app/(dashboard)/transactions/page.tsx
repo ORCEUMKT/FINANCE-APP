@@ -210,7 +210,17 @@ function TransactionsContent() {
       // the caller and the transaction owner before allowing the write.
       const isPartnerTx = unifiedMode && !!sharedAccount && editing.user_id !== myMembership?.user_id
       if (isPartnerTx) {
-        await updateSharedTransaction(sharedAccount!.id, editing.id, data)
+        // Preserve the transaction owner's category_id. The edit form shows the
+        // caller's own categories (mapped from shared_categories), so the selected
+        // category_id would belong to the caller, not the owner. Submitting a
+        // caller-owned category_id creates an integrity violation: the owner's
+        // transaction would reference a category invisible to them under RLS.
+        // Force the original category_id here; the server-side guard in
+        // update_shared_transaction also validates this independently.
+        await updateSharedTransaction(sharedAccount!.id, editing.id, {
+          ...data,
+          category_id: editing.category_id,
+        })
       } else if (options?.cascadeDates && data.date !== editing.date) {
         await updateInstallmentGroupDates(editing, data.date)
         await updateTransaction(editing.id, data)
