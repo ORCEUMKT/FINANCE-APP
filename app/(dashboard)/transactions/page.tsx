@@ -11,7 +11,7 @@ import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedTransactionsPage, getSharedCategories } from '@/services/sharedAccountService'
+import { getSharedTransactionsPage, getSharedCategories, updateSharedTransaction } from '@/services/sharedAccountService'
 import {
   getPersonalTransactionsPage,
   createTransaction,
@@ -201,9 +201,17 @@ function TransactionsContent() {
   const displayTxs     = unifiedMode ? unifiedTxs : personalTxs
   const displayLoading = unifiedMode ? unifiedLoading : personalLoading
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
     if (editing) {
-      if (options?.cascadeDates && data.date !== editing.date) {
+      // Partner transaction in shared mode: the caller's user_id differs from the
+      // transaction owner's user_id, so RLS blocks a direct update. Route through
+      // the SECURITY DEFINER RPC which enforces shared-account membership on both
+      // the caller and the transaction owner before allowing the write.
+      const isPartnerTx = unifiedMode && !!sharedAccount && editing.user_id !== myMembership?.user_id
+      if (isPartnerTx) {
+        await updateSharedTransaction(sharedAccount!.id, editing.id, data)
+      } else if (options?.cascadeDates && data.date !== editing.date) {
         await updateInstallmentGroupDates(editing, data.date)
         await updateTransaction(editing.id, data)
       } else {
@@ -218,7 +226,7 @@ function TransactionsContent() {
     bumpPersonal()
     setEditing(null)
     setFormOpen(false)
-  }, [editing, toast, broadcastChange, bumpPersonal])
+  }, [editing, unifiedMode, sharedAccount, myMembership, toast, broadcastChange, bumpPersonal])
 
   const handleDelete = useCallback(async (id: string) => {
     const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)

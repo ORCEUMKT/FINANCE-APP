@@ -11,7 +11,7 @@ import type {
 } from '@/types/sharedAccount'
 import type { Category } from '@/types/category'
 import type { CategoryGoal } from '@/types/goal'
-import type { Transaction } from '@/types/transaction'
+import type { Transaction, TransactionInsert } from '@/types/transaction'
 
 // New tables aren't in generated Supabase types until migrations run
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -613,4 +613,34 @@ export async function deleteSharedGoal(id: string): Promise<void> {
   const supabase = db()
   const { error } = await supabase.from('shared_goals').delete().eq('id', id)
   if (error) throw error
+}
+
+// ─── Shared transaction mutation ─────────────────────────────────────────────
+
+export async function updateSharedTransaction(
+  sharedAccountId: string,
+  transactionId: string,
+  payload: TransactionInsert,
+): Promise<void> {
+  const supabase = db()
+  const { error } = await supabase.rpc('update_shared_transaction', {
+    p_transaction_id:    transactionId,
+    p_shared_account_id: sharedAccountId,
+    p_description:       payload.description,
+    p_value:             payload.value,
+    p_date:              payload.date,
+    p_type:              payload.type ?? 'expense',
+    p_status:            payload.status ?? 'paid',
+    p_notes:             payload.notes ?? null,
+    p_category_id:       payload.category_id ?? null,
+  })
+  if (!error) return
+  if (error.message?.startsWith('Not authorized')) {
+    throw new Error('Sem permissão para editar este lançamento.')
+  }
+  if (error.message?.startsWith('Not found')) {
+    throw new Error('Lançamento não encontrado.')
+  }
+  console.error('[updateSharedTransaction]', error)
+  throw new Error('Erro ao salvar lançamento. Tente novamente.')
 }
