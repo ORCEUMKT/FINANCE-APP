@@ -617,6 +617,33 @@ export async function deleteSharedGoal(id: string): Promise<void> {
 
 // ─── Shared transaction mutation ─────────────────────────────────────────────
 
+export async function deleteSharedInstallmentGroup(
+  sharedAccountId: string,
+  transactionId: string,
+): Promise<{ deletedCount: number }> {
+  const supabase = db()
+  const { data, error } = await supabase.rpc('delete_shared_installment_group', {
+    p_shared_account_id: sharedAccountId,
+    p_transaction_id:    transactionId,
+  })
+  if (!error) {
+    const count = (data as { deleted_count?: number } | null)?.deleted_count ?? 0
+    if (count > 0) return { deletedCount: count }
+    throw new Error('Erro ao excluir parcelas. Nenhuma parcela foi removida.')
+  }
+  if (error.message?.startsWith('Not authorized')) {
+    throw new Error('Sem permissão para excluir as parcelas deste lançamento.')
+  }
+  if (error.message?.startsWith('Not found')) {
+    throw new Error('Lançamento não encontrado.')
+  }
+  if (error.message?.startsWith('Unsupported')) {
+    throw new Error('Não foi possível identificar com segurança todas as parcelas deste lançamento.')
+  }
+  console.error('[deleteSharedInstallmentGroup]', error)
+  throw new Error('Erro ao excluir parcelas. Tente novamente.')
+}
+
 export async function deleteSharedTransaction(
   sharedAccountId: string,
   transactionId: string,

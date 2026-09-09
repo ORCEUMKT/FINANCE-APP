@@ -12,7 +12,7 @@ import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedTransactionsPage, getSharedCategories, updateSharedTransaction, deleteSharedTransaction } from '@/services/sharedAccountService'
+import { getSharedTransactionsPage, getSharedCategories, updateSharedTransaction, deleteSharedTransaction, deleteSharedInstallmentGroup } from '@/services/sharedAccountService'
 import {
   getPersonalTransactionsPage,
   createTransaction,
@@ -312,15 +312,35 @@ function TransactionsContent() {
       toast('Não foi possível confirmar sua sessão. Tente novamente.')
       return
     }
-    if (tx.user_id !== user.id) {
-      toast('Exclusão de todas as parcelas compartilhadas ainda não está disponível.')
+
+    const isOwnTx = tx.user_id === user.id
+
+    if (!isOwnTx) {
+      if (!sharedAccount) {
+        toast('Não foi possível identificar a conta compartilhada deste lançamento.')
+        return
+      }
+      if (!tx.installment_group_id) {
+        toast('Não foi possível identificar com segurança todas as parcelas deste lançamento.')
+        return
+      }
+      try {
+        await deleteSharedInstallmentGroup(sharedAccount.id, tx.id)
+      } catch (err: unknown) {
+        toast(err instanceof Error ? err.message : 'Erro ao excluir parcelas.')
+        return
+      }
+      broadcastChange()
+      bumpPersonal()
+      toast('Todas as parcelas excluídas!')
       return
     }
+
     const result = await deleteInstallmentGroup(tx)
     broadcastChange()
     bumpPersonal()
     toast(result.partial ? 'Lançamento excluído.' : 'Todas as parcelas excluídas!')
-  }, [user, toast, broadcastChange, bumpPersonal])
+  }, [user, sharedAccount, toast, broadcastChange, bumpPersonal])
 
   const handleDuplicate = useCallback((id: string) => {
     const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)
