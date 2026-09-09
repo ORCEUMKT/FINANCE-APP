@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
+import { useAuth } from '@/hooks/useAuth'
 import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
@@ -80,6 +81,7 @@ function TransactionsContent() {
   const [personalTick, setPersonalTick]             = useState(0)
   const bumpPersonal = useCallback(() => setPersonalTick((n) => n + 1), [])
 
+  const { user } = useAuth()
   const { categories } = useCategories()
   const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange, lastCategoryUpdate } = useSharedAccount()
 
@@ -204,20 +206,29 @@ function TransactionsContent() {
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
     if (editing) {
-      // Partner transaction in shared mode: the caller's user_id differs from the
-      // transaction owner's user_id, so RLS blocks a direct update. Route through
-      // the SECURITY DEFINER RPC which enforces shared-account membership on both
-      // the caller and the transaction owner before allowing the write.
-      const isPartnerTx = unifiedMode && !!sharedAccount && editing.user_id !== myMembership?.user_id
-      if (isPartnerTx) {
-        // Preserve the transaction owner's category_id. The edit form shows the
-        // caller's own categories (mapped from shared_categories), so the selected
-        // category_id would belong to the caller, not the owner. Submitting a
-        // caller-owned category_id creates an integrity violation: the owner's
-        // transaction would reference a category invisible to them under RLS.
-        // Force the original category_id here; the server-side guard in
-        // update_shared_transaction also validates this independently.
-        await updateSharedTransaction(sharedAccount!.id, editing.id, {
+      // Require a confirmed auth identity before any DB write.
+      // user is null while useAuth() is still loading (should not happen on a
+      // protected page, but guard explicitly rather than rely on that assumption).
+      if (!user?.id) {
+        throw new Error('Não foi possível confirmar sua sessão. Tente novamente.')
+      }
+      // Route by transaction ownership, not by unifiedMode. unifiedMode can be
+      // stale at submit time; user.id from useAuth() is always current.
+      // Cross-user writes MUST go through the SECURITY DEFINER RPC —
+      // direct updateTransaction is blocked by RLS for partner rows.
+      const isOwnTx = editing.user_id === user.id
+      if (!isOwnTx) {
+        // Partner transaction: sharedAccount must be present to call the RPC.
+        // Never fall back to direct updateTransaction for a cross-user row.
+        if (!sharedAccount) {
+          throw new Error('Não foi possível identificar a conta compartilhada deste lançamento.')
+        }
+        // Preserve the transaction owner's category_id. The edit form may show
+        // the caller's own mapped categories; submitting the caller's category_id
+        // would create an integrity violation (owner's transaction referencing a
+        // category invisible to them under RLS). The server-side Guard 4 in
+        // update_shared_transaction validates this independently.
+        await updateSharedTransaction(sharedAccount.id, editing.id, {
           ...data,
           category_id: editing.category_id,
         })
@@ -236,7 +247,7 @@ function TransactionsContent() {
     bumpPersonal()
     setEditing(null)
     setFormOpen(false)
-  }, [editing, unifiedMode, sharedAccount, myMembership, toast, broadcastChange, bumpPersonal])
+  }, [editing, user, sharedAccount, toast, broadcastChange, bumpPersonal])
 
   const handleDelete = useCallback(async (id: string) => {
     const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)
