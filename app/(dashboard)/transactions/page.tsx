@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Search, X, SlidersHorizontal } from 'lucide-react'
 import { AccountViewSelector } from '@/components/shared/AccountViewSelector'
+import { useAuth } from '@/hooks/useAuth'
 import { useCategories } from '@/hooks/useCategories'
 import { TransactionCard } from '@/components/transactions/TransactionCard'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
@@ -11,7 +12,7 @@ import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedTransactionsPage, getSharedCategories } from '@/services/sharedAccountService'
+import { getSharedTransactionsPage, getSharedCategories, updateSharedTransaction } from '@/services/sharedAccountService'
 import {
   getPersonalTransactionsPage,
   createTransaction,
@@ -80,6 +81,7 @@ function TransactionsContent() {
   const [personalTick, setPersonalTick]             = useState(0)
   const bumpPersonal = useCallback(() => setPersonalTick((n) => n + 1), [])
 
+  const { user } = useAuth()
   const { categories } = useCategories()
   const { sharedAccount, unifiedMode, filterUserId, members, myMembership, setUnifiedMode, setFilterUserId, lastSharedUpdate, broadcastChange, lastCategoryUpdate } = useSharedAccount()
 
@@ -201,9 +203,36 @@ function TransactionsContent() {
   const displayTxs     = unifiedMode ? unifiedTxs : personalTxs
   const displayLoading = unifiedMode ? unifiedLoading : personalLoading
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleSubmit = useCallback(async (data: TransactionInsert, options?: SubmitOptions) => {
     if (editing) {
-      if (options?.cascadeDates && data.date !== editing.date) {
+      // Require a confirmed auth identity before any DB write.
+      // user is null while useAuth() is still loading (should not happen on a
+      // protected page, but guard explicitly rather than rely on that assumption).
+      if (!user?.id) {
+        throw new Error('Não foi possível confirmar sua sessão. Tente novamente.')
+      }
+      // Route by transaction ownership, not by unifiedMode. unifiedMode can be
+      // stale at submit time; user.id from useAuth() is always current.
+      // Cross-user writes MUST go through the SECURITY DEFINER RPC —
+      // direct updateTransaction is blocked by RLS for partner rows.
+      const isOwnTx = editing.user_id === user.id
+      if (!isOwnTx) {
+        // Partner transaction: sharedAccount must be present to call the RPC.
+        // Never fall back to direct updateTransaction for a cross-user row.
+        if (!sharedAccount) {
+          throw new Error('Não foi possível identificar a conta compartilhada deste lançamento.')
+        }
+        // Preserve the transaction owner's category_id. The edit form may show
+        // the caller's own mapped categories; submitting the caller's category_id
+        // would create an integrity violation (owner's transaction referencing a
+        // category invisible to them under RLS). The server-side Guard 4 in
+        // update_shared_transaction validates this independently.
+        await updateSharedTransaction(sharedAccount.id, editing.id, {
+          ...data,
+          category_id: editing.category_id,
+        })
+      } else if (options?.cascadeDates && data.date !== editing.date) {
         await updateInstallmentGroupDates(editing, data.date)
         await updateTransaction(editing.id, data)
       } else {
@@ -218,7 +247,7 @@ function TransactionsContent() {
     bumpPersonal()
     setEditing(null)
     setFormOpen(false)
-  }, [editing, toast, broadcastChange, bumpPersonal])
+  }, [editing, user, sharedAccount, toast, broadcastChange, bumpPersonal])
 
   const handleDelete = useCallback(async (id: string) => {
     const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)

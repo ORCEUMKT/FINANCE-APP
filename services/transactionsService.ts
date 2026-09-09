@@ -114,7 +114,10 @@ export async function updateTransaction(id: string, payload: TransactionUpdate):
     .eq('id', id)
     .select('*, category:categories(*)')
     .single()
-  if (error) throw error
+  if (error) {
+    console.error('[updateTransaction]', error)
+    throw new Error('Erro ao atualizar lançamento.')
+  }
   return data as unknown as Transaction
 }
 
