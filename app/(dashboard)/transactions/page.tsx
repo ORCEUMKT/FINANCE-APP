@@ -12,7 +12,7 @@ import { VoiceMicButton } from '@/components/ui/VoiceMicButton'
 import { MonthPicker, monthRange, type MonthValue } from '@/components/ui/MonthPicker'
 import { useSelectedMonth } from '@/contexts/MonthContext'
 import { useSharedAccount } from '@/contexts/SharedAccountContext'
-import { getSharedTransactionsPage, getSharedCategories, updateSharedTransaction } from '@/services/sharedAccountService'
+import { getSharedTransactionsPage, getSharedCategories, updateSharedTransaction, deleteSharedTransaction } from '@/services/sharedAccountService'
 import {
   getPersonalTransactionsPage,
   createTransaction,
@@ -250,10 +250,39 @@ function TransactionsContent() {
   }, [editing, user, sharedAccount, toast, broadcastChange, bumpPersonal])
 
   const handleDelete = useCallback(async (id: string) => {
+    if (!user?.id) {
+      toast('Não foi possível confirmar sua sessão. Tente novamente.')
+      return
+    }
     const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)
     if (!tx) return
+
+    const isOwnTx = tx.user_id === user.id
+
+    if (!isOwnTx) {
+      if (!sharedAccount) {
+        toast('Não foi possível identificar a conta compartilhada deste lançamento.')
+        return
+      }
+      try {
+        await deleteSharedTransaction(sharedAccount.id, id)
+      } catch (err: unknown) {
+        toast(err instanceof Error ? err.message : 'Erro ao excluir lançamento.')
+        return
+      }
+      broadcastChange()
+      bumpPersonal()
+      toast('Lançamento excluído.')
+      return
+    }
+
     setDeletedBuffer(tx)
-    await deleteTransaction(id)
+    try {
+      await deleteTransaction(id)
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir lançamento.')
+      return
+    }
     broadcastChange()
     bumpPersonal()
     toast('Lançamento excluído.', {
@@ -276,14 +305,22 @@ function TransactionsContent() {
         },
       },
     })
-  }, [unifiedMode, unifiedTxs, personalTxs, broadcastChange, bumpPersonal, toast, deletedBuffer])
+  }, [unifiedMode, unifiedTxs, personalTxs, user, sharedAccount, broadcastChange, bumpPersonal, toast, deletedBuffer])
 
   const handleDeleteGroup = useCallback(async (tx: Transaction) => {
+    if (!user?.id) {
+      toast('Não foi possível confirmar sua sessão. Tente novamente.')
+      return
+    }
+    if (tx.user_id !== user.id) {
+      toast('Exclusão de todas as parcelas compartilhadas ainda não está disponível.')
+      return
+    }
     const result = await deleteInstallmentGroup(tx)
     broadcastChange()
     bumpPersonal()
     toast(result.partial ? 'Lançamento excluído.' : 'Todas as parcelas excluídas!')
-  }, [toast, broadcastChange, bumpPersonal])
+  }, [user, toast, broadcastChange, bumpPersonal])
 
   const handleDuplicate = useCallback((id: string) => {
     const tx = (unifiedMode ? unifiedTxs : personalTxs).find((t) => t.id === id)

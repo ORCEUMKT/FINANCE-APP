@@ -123,8 +123,16 @@ export async function updateTransaction(id: string, payload: TransactionUpdate):
 
 export async function deleteTransaction(id: string): Promise<void> {
   const supabase = createClient()
-  const { error } = await supabase.from('transactions').delete().eq('id', id)
-  if (error) throw error
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .single()
+  if (error) {
+    console.error('[deleteTransaction]', error)
+    throw new Error('Erro ao excluir lançamento.')
+  }
 }
 
 export async function duplicateTransaction(id: string): Promise<Transaction> {

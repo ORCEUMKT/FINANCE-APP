@@ -617,6 +617,26 @@ export async function deleteSharedGoal(id: string): Promise<void> {
 
 // ─── Shared transaction mutation ─────────────────────────────────────────────
 
+export async function deleteSharedTransaction(
+  sharedAccountId: string,
+  transactionId: string,
+): Promise<void> {
+  const supabase = db()
+  const { error } = await supabase.rpc('delete_shared_transaction', {
+    p_shared_account_id: sharedAccountId,
+    p_transaction_id:    transactionId,
+  })
+  if (!error) return
+  if (error.message?.startsWith('Not authorized')) {
+    throw new Error('Sem permissão para excluir este lançamento.')
+  }
+  if (error.message?.startsWith('Not found')) {
+    throw new Error('Lançamento não encontrado.')
+  }
+  console.error('[deleteSharedTransaction]', error)
+  throw new Error('Erro ao excluir lançamento. Tente novamente.')
+}
+
 export async function updateSharedTransaction(
   sharedAccountId: string,
   transactionId: string,
